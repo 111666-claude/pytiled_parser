@@ -14,7 +14,7 @@ from pytiled_parser.tiled_object import (
     Tile,
     TiledObject,
 )
-from pytiled_parser.util import load_object_template, parse_color
+from pytiled_parser.util import json_object_to_xml, load_object_template, parse_color
 
 
 def _parse_common(raw_object: etree.Element) -> TiledObject:
@@ -263,54 +263,75 @@ def parse(
     new_tileset = None
     new_tileset_path = None
 
-    if raw_object.attrib.get("template"):
+    seen_templates = []
+
+    while raw_object.attrib.get("template"):
         if not parent_dir:
             raise RuntimeError(
                 "A parent directory must be specified when using object templates."
             )
         template_path = Path(parent_dir / raw_object.attrib["template"])
-        template, new_tileset, new_tileset_path = load_object_template(
-            template_path, encoding
-        )
+
+        if template_path in seen_templates:
+            raise ValueError(
+                "Circular object template reference detected involving: "
+                f"{template_path.absolute()}"
+            )
+        seen_templates.append(template_path)
+
+        try:
+            template, loaded_tileset, loaded_tileset_path = load_object_template(
+                template_path, encoding
+            )
+        except (FileNotFoundError, ValueError) as exception:
+            raise type(exception)(
+                f"Could not load object template for object id "
+                f"{raw_object.attrib.get('id')}: {exception}"
+            ) from exception
+
+        if loaded_tileset is not None:
+            new_tileset = loaded_tileset
+            new_tileset_path = loaded_tileset_path
 
         if isinstance(template, etree.Element):
             new_object = template.find("./object")
-            if new_object is not None:
-                for key, val in raw_object.attrib.items():
-                    if key == "template":
-                        continue
-                    new_object.attrib[key] = val
+        else:
+            # The template is in the JSON format, convert the object within it
+            # to an XML element so it can be merged and parsed as TMX.
+            new_object = json_object_to_xml(template["object"])
 
-                properties_element = raw_object.find("./properties")
-                temp_properties_element = new_object.find("./properties")
-                if properties_element is not None and temp_properties_element is None:
-                    new_object.append(properties_element)
-                elif properties_element is None and temp_properties_element is not None:
-                    pass
-                elif (
-                    properties_element is not None
-                    and temp_properties_element is not None
-                ):
-                    for prop in temp_properties_element:
-
-                        found = False
-                        for prop2 in properties_element:
-                            if prop.attrib["name"] == prop2.attrib["name"]:
-                                found = True
-                                break
-
-                        if not found:
-                            properties_element.append(prop)
-                    new_object.remove(temp_properties_element)
-                    new_object.append(properties_element)
-
-                raw_object = new_object
-        elif isinstance(template, dict):
-            # load the JSON object into the XML object
-            raise NotImplementedError(
-                "Loading JSON object templates inside a TMX map is currently not supported, "
-                "but will be in a future release."
+        if new_object is None:
+            raise ValueError(
+                "Object template file does not contain an object: "
+                f"{template_path.absolute()}"
             )
+
+        for key, val in raw_object.attrib.items():
+            if key == "template":
+                continue
+            new_object.attrib[key] = val
+
+        properties_element = raw_object.find("./properties")
+        temp_properties_element = new_object.find("./properties")
+        if properties_element is not None and temp_properties_element is None:
+            new_object.append(properties_element)
+        elif properties_element is None and temp_properties_element is not None:
+            pass
+        elif properties_element is not None and temp_properties_element is not None:
+            for prop in temp_properties_element:
+
+                found = False
+                for prop2 in properties_element:
+                    if prop.attrib["name"] == prop2.attrib["name"]:
+                        found = True
+                        break
+
+                if not found:
+                    properties_element.append(prop)
+            new_object.remove(temp_properties_element)
+            new_object.append(properties_element)
+
+        raw_object = new_object
 
     if raw_object.attrib.get("gid"):
         return _parse_tile(raw_object, new_tileset, new_tileset_path)

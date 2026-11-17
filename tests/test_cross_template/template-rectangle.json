@@ -3,6 +3,17 @@
      "height":38.2811778048473,
      "id":1,
      "name":"",
+     "properties":[
+            {
+             "name":"color prop",
+             "type":"color",
+             "value":"#ff49fcff"
+            },
+            {
+             "name":"test",
+             "type":"string",
+             "value":"fromtemplate"
+            }],
      "rotation":0,
      "type":"",
      "visible":true,

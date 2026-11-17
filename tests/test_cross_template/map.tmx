@@ -11,6 +11,11 @@
  <tileset firstgid="1" source="tileset.tsx"/>
  <tileset firstgid="49" source="tile_set_image_for_template.tsx"/>
  <objectgroup id="2" name="Object Layer 1">
-  <object id="2" template="template-rectangle.json" x="98.4988" y="46.2385"/>
+  <object id="2" template="template-rectangle.json" x="98.4988" y="46.2385">
+   <properties>
+    <property name="test" value="hello"/>
+   </properties>
+  </object>
+  <object id="3" template="template-tile.json" x="46" y="136.6667"/>
  </objectgroup>
 </map>

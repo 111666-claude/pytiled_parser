@@ -149,28 +149,60 @@ def parse(file: Path, encoding: str) -> TiledMap:
         for tiled_object in my_layer.tiled_objects:  # type: ignore
             if hasattr(tiled_object, "new_tileset"):
                 if tiled_object.new_tileset is not None:
+                    raw_new_tileset = tiled_object.new_tileset
+
+                    # The tileset referenced by an object template can be in
+                    # either the TMX or JSON format, regardless of the format
+                    # of the map and template themselves.
+                    if isinstance(raw_new_tileset, etree.Element):
+                        new_tileset_name = raw_new_tileset.attrib["name"]
+                    else:
+                        new_tileset_name = raw_new_tileset["name"]
+
                     already_loaded = None
                     for val in map_.tilesets.values():
-                        if val.name == tiled_object.new_tileset["name"]:
+                        if val.name == new_tileset_name:
                             already_loaded = val
                             break
 
-                    if not already_loaded:
+                    if already_loaded is not None:
+                        new_firstgid = already_loaded.firstgid
+                    elif map_.tilesets:
                         highest_firstgid = max(map_.tilesets.keys())
                         last_tileset_count = map_.tilesets[highest_firstgid].tile_count
                         new_firstgid = highest_firstgid + last_tileset_count
-                        map_.tilesets[new_firstgid] = parse_json_tileset(
-                            tiled_object.new_tileset,
+                    else:
+                        new_firstgid = 1
+
+                    if isinstance(raw_new_tileset, etree.Element):
+                        parsed_tileset = parse_tmx_tileset(
+                            raw_new_tileset,
                             new_firstgid,
                             encoding,
                             tiled_object.new_tileset_path,
                         )
-                        tiled_object.gid = tiled_object.gid + (new_firstgid - 1)
-
                     else:
-                        tiled_object.gid = tiled_object.gid + (
-                            already_loaded.firstgid - 1
+                        parsed_tileset = parse_json_tileset(
+                            raw_new_tileset,
+                            new_firstgid,
+                            encoding,
+                            tiled_object.new_tileset_path,
                         )
+
+                    if already_loaded is not None:
+                        if (
+                            parsed_tileset.tile_count != already_loaded.tile_count
+                            or parsed_tileset.image != already_loaded.image
+                        ):
+                            raise ValueError(
+                                "An object template references the tileset "
+                                f"'{new_tileset_name}', which conflicts with an "
+                                "already loaded tileset of the same name."
+                            )
+                    else:
+                        map_.tilesets[new_firstgid] = parsed_tileset
+
+                    tiled_object.gid = tiled_object.gid + (new_firstgid - 1)
 
                     tiled_object.new_tileset = None
                     tiled_object.new_tileset_path = None

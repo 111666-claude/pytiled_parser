@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [Unreleased]
+
+Object templates can now be used across formats: a TMX map can reference JSON object templates, and a JSON map can reference TMX object templates. Template defaults are merged into the object with values explicitly set on the object taking precedence, and tilesets referenced by a template are resolved into the host map regardless of the tileset's format. Loading a template now also raises contextual errors for missing template or tileset files, malformed template files, circular template references, and template tilesets that conflict with an already loaded tileset of the same name.
+
 ## [2.2.9] - 2025-01-23
 
 Fixes a bug where object templates would cause an error when used inside of TileSet. This occurs when using an object template to define collision details on a tile within a tileset. See #82.

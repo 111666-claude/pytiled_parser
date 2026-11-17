@@ -32,7 +32,7 @@ def parse_map(file: Path, encoding: str = "utf-8") -> TiledMap:
     else:
         try:
             return json_map_parse(file, encoding)  # type: ignore
-        except ValueError:
+        except json.JSONDecodeError:
             raise UnknownFormat(
                 "Unknown Map Format, please use either the TMX or JSON format. "
                 "This message could also mean your map file is invalid or corrupted."

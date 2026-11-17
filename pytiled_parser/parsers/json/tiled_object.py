@@ -19,7 +19,7 @@ from pytiled_parser.tiled_object import (
     Tile,
     TiledObject,
 )
-from pytiled_parser.util import load_object_template, parse_color
+from pytiled_parser.util import load_object_template, parse_color, xml_object_to_json
 
 RawText = TypedDict(
     "RawText",
@@ -309,44 +309,81 @@ def parse(
     new_tileset = None
     new_tileset_path = None
 
-    if raw_object.get("template"):
+    seen_templates = []
+
+    while raw_object.get("template"):
         if not parent_dir:
             raise RuntimeError(
                 "A parent directory must be specified when using object templates."
             )
         template_path = Path(parent_dir / raw_object["template"])
-        template, new_tileset, new_tileset_path = load_object_template(
-            template_path, encoding
-        )
+
+        if template_path in seen_templates:
+            raise ValueError(
+                "Circular object template reference detected involving: "
+                f"{template_path.absolute()}"
+            )
+        seen_templates.append(template_path)
+
+        del raw_object["template"]  # type: ignore
+
+        try:
+            template, loaded_tileset, loaded_tileset_path = load_object_template(
+                template_path, encoding
+            )
+        except (FileNotFoundError, ValueError) as exception:
+            raise type(exception)(
+                f"Could not load object template for object id "
+                f"{raw_object.get('id')}: {exception}"
+            ) from exception
+
+        if loaded_tileset is not None:
+            new_tileset = loaded_tileset
+            new_tileset_path = loaded_tileset_path
 
         if isinstance(template, dict):
             loaded_template = template["object"]
-            for key in loaded_template:
-                if key != "id":
-                    if key == "properties":
-                        if "properties" not in raw_object:
-                            raw_object["properties"] = []
-
-                        for prop in loaded_template["properties"]:
-
-                            found = False
-                            for prop2 in raw_object["properties"]:
-                                if prop2["name"] == prop["name"]:
-                                    found = True
-                                    break
-
-                            if not found:
-                                raw_object["properties"].append(prop)
-                    elif key == "name":
-                        if "name" not in raw_object:
-                            raw_object["name"] = loaded_template[key]
-                    else:
-                        raw_object[key] = loaded_template[key]  # type: ignore
         else:
-            raise NotImplementedError(
-                "Loading TMX object templates inside a JSON map is currently not supported, "
-                "but will be in a future release."
-            )
+            # The template is in the TMX format, convert the object within it
+            # to a JSON style dict so it can be merged and parsed as JSON.
+            template_object = template.find("./object")
+            loaded_template = xml_object_to_json(template_object)
+
+        for key in loaded_template:
+            if key == "id":
+                continue
+            if key == "properties":
+                if "properties" not in raw_object:
+                    raw_object["properties"] = []
+
+                for prop in loaded_template["properties"]:
+
+                    found = False
+                    for prop2 in raw_object["properties"]:
+                        if prop2["name"] == prop["name"]:
+                            found = True
+                            break
+
+                    if not found:
+                        raw_object["properties"].append(prop)
+            elif key not in raw_object:
+                # Values explicitly set on the object override template defaults
+                raw_object[key] = loaded_template[key]  # type: ignore
+
+    if seen_templates:
+        # TMX templates omit attributes that hold Tiled's default values,
+        # fill in anything still missing after merging.
+        for key, default in (
+            ("x", 0.0),
+            ("y", 0.0),
+            ("width", 0.0),
+            ("height", 0.0),
+            ("rotation", 0.0),
+            ("visible", True),
+            ("name", ""),
+        ):
+            if key not in raw_object:
+                raw_object[key] = default  # type: ignore
 
     if raw_object.get("gid"):
         return _parse_tile(raw_object, new_tileset, new_tileset_path)
