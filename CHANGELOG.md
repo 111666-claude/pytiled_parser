@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [Unreleased]
+
+Adds rectangular region querying and on-demand map loading to the `World` class to support scrolling camera viewports.
+
+- `World.maps_in_region(x, y, width, height)` returns the `WorldMap` objects that intersect a rectangular region in world pixel coordinates. Negative coordinates and floating point positions are supported, results preserve world file order, and intersection is strict (rectangles only sharing an edge or corner do not intersect).
+- `World.load_maps(x, y, width, height, encoding="utf-8")` queries a region and parses the maps it covers. Each distinct map file is parsed at most once and cached on the `World`; duplicate references to the same file are collapsed to a single result.
+- `World.load_world_map(world_map, encoding="utf-8")` parses a single `WorldMap` with the same per-file caching, raising `FileNotFoundError` with the offending path when the map file is missing.
+- `WorldMap.bounds` exposes the map's `(left, top, right, bottom)` bounding box in world coordinates.
+- Zero or negative region dimensions now raise `ValueError` with the full region in the error context, and zero or negative map sizes in a world file raise `ValueError` naming the offending file when the world is parsed.
+
 ## [2.2.9] - 2025-01-23
 
 Fixes a bug where object templates would cause an error when used inside of TileSet. This occurs when using an object template to define collision details on a tile within a tileset. See #82.
