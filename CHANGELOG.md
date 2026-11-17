@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [Unreleased]
+
+Adds a new `pytiled_parser.tile_collision` module with `extract_tile_collisions()`, which extracts the collision shapes defined in Tiled's tile collision editor from the tile layers of orthogonal maps and reprojects them into world pixel coordinates. It walks normal and infinite (chunked) tile layers, including layers nested in group layers, accumulates layer/group offsets, and applies the GID horizontal, vertical, and diagonal flip flags to rectangle, ellipse, and polygon collision objects. Empty GIDs and tiles without collision objects are skipped, while unknown tilesets, invalid flip flags, rotated collision objects, and non-orthogonal maps raise dedicated errors (`InvalidTileGidError`, `UnsupportedCollisionObjectError`, `UnsupportedOrientationError`).
+
 ## [2.2.9] - 2025-01-23
 
 Fixes a bug where object templates would cause an error when used inside of TileSet. This occurs when using an object template to define collision details on a tile within a tileset. See #82.

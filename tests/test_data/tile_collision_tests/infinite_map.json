@@ -1,0 +1,58 @@
+{ "compressionlevel":0,
+ "height":8,
+ "infinite":true,
+ "layers":[
+        {
+         "chunks":[
+                {
+                 "data":[1, 0, 0, 0,
+                         0, 0, 0, 0,
+                         0, 0, 0, 0,
+                         0, 0, 2147483649, 0],
+                 "height":4,
+                 "width":4,
+                 "x":-4,
+                 "y":-4
+                },
+                {
+                 "data":[0, 0, 0, 0,
+                         0, 3, 0, 0,
+                         0, 0, 0, 0,
+                         0, 0, 0, 0],
+                 "height":4,
+                 "width":4,
+                 "x":0,
+                 "y":0
+                }],
+         "height":8,
+         "id":1,
+         "name":"inf",
+         "opacity":1,
+         "startx":-4,
+         "starty":-4,
+         "type":"tilelayer",
+         "visible":true,
+         "width":8,
+         "x":0,
+         "y":0
+        }],
+ "nextlayerid":2,
+ "nextobjectid":1,
+ "orientation":"orthogonal",
+ "renderorder":"right-down",
+ "tiledversion":"1.9.0",
+ "tileheight":32,
+ "tilesets":[
+        {
+         "firstgid":1,
+         "source":"tileset_a.json"
+        },
+        {
+         "firstgid":5,
+         "source":"tileset_b.json"
+        }],
+ "tilewidth":32,
+ "type":"map",
+ "version":"1.9",
+ "width":8
+}

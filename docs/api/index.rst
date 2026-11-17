@@ -20,6 +20,7 @@ cover some of the concepts surrounding that module and it's usage within Tiled.
     properties
     tileset
     layer
+    tile_collision
     objects
     map
     wang_set
