@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.9" tiledversion="1.9.2" orientation="orthogonal" renderorder="right-down" compressionlevel="0" width="4" height="4" tilewidth="16" tileheight="16" infinite="0" nextlayerid="5" nextobjectid="5" class="LevelSettings">
+ <properties>
+  <property name="difficulty" type="int" value="5"/>
+ </properties>
+ <tileset firstgid="1" source="tileset.tsx"/>
+ <layer id="1" name="Ground" width="4" height="4" class="Zone">
+  <data>
+   1,1,0,0,
+   1,1,0,0,
+   0,0,0,0,
+   0,0,0,0
+  </data>
+ </layer>
+ <objectgroup id="2" name="Entities" width="4" height="4">
+  <object id="1" class="Character" x="10" y="20" width="16" height="16">
+   <properties>
+    <property name="health" type="int" value="250"/>
+    <property name="target" type="object" value="2"/>
+    <property name="stats" type="class" propertytype="Stats">
+     <properties>
+      <property name="maxHealth" type="int" value="500"/>
+      <property name="tint" type="color" value="#ffff0000"/>
+     </properties>
+    </property>
+   </properties>
+  </object>
+  <object id="2" class="Character" x="40" y="20" width="16" height="16"/>
+  <object id="3" class="Character" x="70" y="20" width="16" height="16">
+   <properties>
+    <property name="mode" propertytype="MovementMode" value="fly"/>
+    <property name="hostile" type="bool" value="true"/>
+   </properties>
+  </object>
+ </objectgroup>
+ <group id="3" name="Zones" class="Zone">
+  <objectgroup id="4" name="Inner" width="4" height="4">
+   <object id="4" class="Character" x="0" y="0" width="8" height="8"/>
+  </objectgroup>
+ </group>
+</map>

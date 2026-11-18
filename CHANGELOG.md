@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [Unreleased]
+
+Adds optional support for loading custom classes and enums from a Tiled project file (`.tiled-project`). Pass `project=True` to `parse_map()` or `parse_tileset()` to auto-discover a project file next to the map/tileset, or pass a `Path` to a specific project file or an already loaded `pytiled_parser.Project`.
+
+When a project is loaded, maps, layers, tiles, tilesets and objects assigned a custom class get their effective properties computed by merging the class's member defaults with the values explicitly stored in the map. Explicit values override same-named defaults, and nested custom class properties are merged field by field rather than replaced wholesale. The existing value types are preserved: colors are `Color`, file references are `Path`, booleans stay booleans, object references are returned as `ObjectRef` (an `int` subclass) and nested classes are dictionaries. TMX and JSON maps produce identical results.
+
+Project loading and property resolution raise dedicated exceptions, all derived from `ProjectError`, with messages identifying the offending map/layer/tile/object location: `ProjectNotFoundError`, `InvalidProjectError`, `UnknownClassError`, `CircularClassReferenceError`, `InvalidEnumValueError`, `PropertyTypeConflictError` and `InvalidPropertyPathError`. Without the `project` argument parsing behavior is unchanged, so this feature is fully opt in.
+
 ## [2.2.9] - 2025-01-23
 
 Fixes a bug where object templates would cause an error when used inside of TileSet. This occurs when using an object template to define collision details on a tile within a tileset. See #82.

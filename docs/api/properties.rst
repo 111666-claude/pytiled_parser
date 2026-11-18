@@ -13,10 +13,19 @@ built-in Python types.
 pytiled_parser.Property
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-The ``pytiled_parser.Property`` type is a Union of the `float`, `str`, and `bool` built-in types, as well as
-`Path` class from pathlib, and the `pytiled_parser.Color` common type.
+The ``pytiled_parser.Property`` type is a Union of the `float`, `str`, `int`, and `bool` built-in types, as well as
+`Path` class from pathlib, the `pytiled_parser.Color` common type, the `pytiled_parser.ObjectRef` type for object
+reference properties, and dictionaries representing nested custom class property values.
 
 A property may be any one of these types.
+
+pytiled_parser.ObjectRef
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+An object reference property (``type="object"`` in Tiled) holds the integer id
+of the referenced object (``0`` means no object is referenced).
+``ObjectRef`` is an ``int`` subclass, so it behaves exactly like the
+referenced id while remaining distinguishable as an object reference.
 
 pytiled_parser.Properties
 ^^^^^^^^^^^^^^^^^^^^^^^^^

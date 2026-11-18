@@ -1,0 +1,206 @@
+{
+    "automappingRulesFile": "",
+    "commands": [],
+    "extensionsPath": "extensions",
+    "folders": [
+        "."
+    ],
+    "objectTypesFile": "",
+    "propertyTypes": [
+        {
+            "type": "enum",
+            "name": "MovementMode",
+            "storageType": "string",
+            "values": [
+                "walk",
+                "fly",
+                "swim"
+            ],
+            "valuesAsFlags": false
+        },
+        {
+            "type": "enum",
+            "name": "Layers",
+            "storageType": "string",
+            "values": [
+                "ground",
+                "air",
+                "water"
+            ],
+            "valuesAsFlags": true
+        },
+        {
+            "type": "class",
+            "name": "Stats",
+            "color": "#ffa0a0a0",
+            "drawFill": true,
+            "useAs": [
+                "property"
+            ],
+            "members": [
+                {
+                    "name": "maxHealth",
+                    "type": "int",
+                    "value": 100
+                },
+                {
+                    "name": "moveSpeed",
+                    "type": "float",
+                    "value": 5.5
+                },
+                {
+                    "name": "tint",
+                    "type": "color",
+                    "value": "#ff3366ff"
+                }
+            ]
+        },
+        {
+            "type": "class",
+            "name": "Character",
+            "color": "#ffcc6600",
+            "drawFill": true,
+            "useAs": [
+                "object"
+            ],
+            "members": [
+                {
+                    "name": "health",
+                    "type": "int",
+                    "value": 100
+                },
+                {
+                    "name": "moveSpeed",
+                    "type": "float",
+                    "value": 7.25
+                },
+                {
+                    "name": "nameTag",
+                    "type": "string",
+                    "value": "hero"
+                },
+                {
+                    "name": "hostile",
+                    "type": "bool",
+                    "value": false
+                },
+                {
+                    "name": "sprite",
+                    "type": "file",
+                    "value": "sprite.png"
+                },
+                {
+                    "name": "mode",
+                    "type": "enum",
+                    "propertyType": "MovementMode",
+                    "value": "walk"
+                },
+                {
+                    "name": "layerMask",
+                    "type": "enum",
+                    "propertyType": "Layers",
+                    "value": "ground,air"
+                },
+                {
+                    "name": "target",
+                    "type": "object",
+                    "value": 0
+                },
+                {
+                    "name": "stats",
+                    "type": "class",
+                    "propertyType": "Stats",
+                    "value": {
+                        "maxHealth": 100,
+                        "moveSpeed": 5.5,
+                        "tint": "#ff3366ff"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "class",
+            "name": "LevelSettings",
+            "color": "#ff22aa55",
+            "drawFill": true,
+            "useAs": [
+                "map"
+            ],
+            "members": [
+                {
+                    "name": "timeOfDay",
+                    "type": "string",
+                    "value": "day"
+                },
+                {
+                    "name": "difficulty",
+                    "type": "int",
+                    "value": 2
+                },
+                {
+                    "name": "ambient",
+                    "type": "color",
+                    "value": "#ff102030"
+                }
+            ]
+        },
+        {
+            "type": "class",
+            "name": "Zone",
+            "color": "#ff7755ee",
+            "drawFill": true,
+            "useAs": [
+                "layer"
+            ],
+            "members": [
+                {
+                    "name": "zoneName",
+                    "type": "string",
+                    "value": "default-zone"
+                },
+                {
+                    "name": "enabled",
+                    "type": "bool",
+                    "value": true
+                }
+            ]
+        },
+        {
+            "type": "class",
+            "name": "TileMeta",
+            "color": "#ff999999",
+            "drawFill": true,
+            "useAs": [
+                "tile"
+            ],
+            "members": [
+                {
+                    "name": "cost",
+                    "type": "int",
+                    "value": 1
+                },
+                {
+                    "name": "passable",
+                    "type": "bool",
+                    "value": true
+                }
+            ]
+        },
+        {
+            "type": "class",
+            "name": "TilesetMeta",
+            "color": "#ff888888",
+            "drawFill": true,
+            "useAs": [
+                "tileset"
+            ],
+            "members": [
+                {
+                    "name": "tilesetTag",
+                    "type": "string",
+                    "value": "world-1"
+                }
+            ]
+        }
+    ]
+}

@@ -18,6 +18,7 @@ cover some of the concepts surrounding that module and it's usage within Tiled.
     parser
     common_types
     properties
+    project
     tileset
     layer
     objects
