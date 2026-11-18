@@ -21,6 +21,7 @@ cover some of the concepts surrounding that module and it's usage within Tiled.
     tileset
     layer
     objects
+    hit_test
     map
     wang_set
     world

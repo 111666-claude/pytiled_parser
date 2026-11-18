@@ -13,6 +13,7 @@ PyTiled Parser is not tied to any particular graphics library or game engine.
 
 from .common_types import Color, OrderedPair, Size
 from .exception import UnknownFormat
+from .hit_test import HitResult, hit_test
 from .layer import Chunk, ImageLayer, Layer, LayerGroup, ObjectLayer, TileLayer
 from .parser import parse_map, parse_world, parse_tileset
 from .properties import Properties, Property
@@ -25,12 +26,14 @@ __all__ = [
     "OrderedPair",
     "Size",
     "UnknownFormat",
+    "HitResult",
     "Chunk",
     "ImageLayer",
     "Layer",
     "LayerGroup",
     "ObjectLayer",
     "TileLayer",
+    "hit_test",
     "parse_map",
     "parse_world",
     "parse_tileset",

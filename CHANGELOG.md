@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [Unreleased]
+
+Adds object hit testing (point selection) through a new `pytiled_parser.hit_test` module and a top level `hit_test()` function. Given a parsed `TiledMap` and a map coordinate, `hit_test()` returns the visible objects whose shapes contain that coordinate, ordered from the topmost object to the bottommost one according to the map's draw order.
+
+All five Tiled shape types are supported: rectangles, ellipses, polygons, polylines and point objects. Text and tile objects are tested against their bounding rectangle. The query accounts for object rotation, object layer offsets, accumulated group layer offsets, object/layer/group visibility, and both the "top down" and "manual" object layer draw orders.
+
+Separate click tolerances in pixels can be supplied for line-like shapes (`line_tolerance`) and point-like shapes (`point_tolerance`). Invalid tolerances (negative, NaN or infinite values, or non-numeric types) and invalid query coordinates raise explicit `ValueError` or `TypeError` exceptions. Objects without an ID are still reported, with the `HitResult.object_id` field set to `None`.
+
 ## [2.2.8] - 2025-01-16
 
 Add explicit support for 3.13, previous versions work on 3.13 but it was not explicitly labeled as supported or being tested by CI.

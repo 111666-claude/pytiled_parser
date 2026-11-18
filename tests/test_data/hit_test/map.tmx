@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.9" tiledversion="1.9.1" orientation="orthogonal" renderorder="right-down" width="40" height="30" tilewidth="16" tileheight="16" infinite="0" nextlayerid="10" nextobjectid="51">
+ <objectgroup id="2" name="Topdown Objects" draworder="topdown">
+  <object id="1" name="rect bottom" x="80" y="100" width="40" height="40"/>
+  <object id="2" name="rect middle" x="80" y="90" width="40" height="40"/>
+  <object id="3" name="rect top" x="80" y="80" width="40" height="40"/>
+  <object id="4" name="invisible rect" x="80" y="80" width="40" height="40" visible="0"/>
+  <object id="5" name="negative coords rect" x="-30" y="-20" width="30" height="30"/>
+  <object id="6" name="degenerate horizontal rect" x="200" y="200" width="40" height="0"/>
+  <object id="7" name="degenerate point rect" x="260" y="260" width="0" height="0"/>
+  <object id="8" name="circle" x="300" y="80" width="40" height="40">
+   <ellipse/>
+  </object>
+  <object id="9" name="rotated ellipse" x="400" y="100" width="40" height="20" rotation="90">
+   <ellipse/>
+  </object>
+  <object id="10" name="triangle" x="60" y="300">
+   <polygon points="0,0 40,0 20,30"/>
+  </object>
+  <object id="11" name="rotated square polygon" x="200" y="340" rotation="90">
+   <polygon points="0,0 30,0 30,30 0,30"/>
+  </object>
+  <object id="12" name="polyline" x="400" y="200">
+   <polyline points="0,0 50,0 50,50"/>
+  </object>
+  <object id="13" name="point" x="500" y="50" width="0" height="0">
+   <point/>
+  </object>
+  <object id="14" name="degenerate ellipse" x="300" y="260" width="0" height="0">
+   <ellipse/>
+  </object>
+ </objectgroup>
+ <objectgroup id="3" name="Manual Order" draworder="manual" offsetx="10" offsety="0" opacity="0.5">
+  <object id="20" name="manual bottom" x="550" y="350" width="30" height="30"/>
+  <object id="21" name="manual top" x="550" y="350" width="30" height="30"/>
+ </objectgroup>
+ <group id="4" name="Offset Group" offsetx="50" offsety="20">
+  <objectgroup id="5" name="Group Objects">
+   <object id="30" name="group rect" x="0" y="0" width="30" height="30"/>
+  </objectgroup>
+  <group id="6" name="Hidden Inner Group">
+   <objectgroup id="7" name="Hidden Inner Objects" visible="0">
+    <object id="31" name="hidden group rect" x="0" y="100" width="30" height="30"/>
+   </objectgroup>
+  </group>
+ </group>
+ <objectgroup id="8" name="Hidden Layer" visible="0">
+  <object id="40" name="hidden layer rect" x="150" y="150" width="30" height="30"/>
+ </objectgroup>
+ <objectgroup id="9" name="Top Layer">
+  <object id="50" name="top layer rect" x="85" y="85" width="30" height="30"/>
+ </objectgroup>
+</map>
