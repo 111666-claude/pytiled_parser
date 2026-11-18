@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [Unreleased]
+
+Adds a new `pytiled_parser.animation` module for querying animated tiles. Given a tile layer, the map's tilesets, a cell coordinate and a non-negative elapsed time in milliseconds, `get_tile_gid_at()` returns the GID that should be displayed at that moment. Static cells are returned unchanged, animations loop according to their frame durations, and the horizontal, vertical and diagonal flip flags of the original cell are preserved. Both regular tile layers and infinite map layers made up of chunks are supported, along with maps using multiple tilesets. Empty animations and frames with non-positive durations are treated as static tiles; out of bounds coordinates, GIDs not covered by any tileset and animation frames referencing unknown tile IDs return `None`, while a negative elapsed time raises `ValueError`.
+
 ## [2.2.9] - 2025-01-23
 
 Fixes a bug where object templates would cause an error when used inside of TileSet. This occurs when using an object template to define collision details on a tile within a tileset. See #82.
