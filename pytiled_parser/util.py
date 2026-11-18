@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from pytiled_parser.common_types import Color
+from pytiled_parser.exception import ObjectTemplateError
 
 
 def parse_color(color: str) -> Color:
@@ -47,6 +48,15 @@ def check_format(file_path: Path, encoding: str) -> str:
 
 
 def load_object_template(file_path: Path, encoding: str) -> Any:
+    try:
+        return _load_object_template(file_path, encoding)
+    except Exception as error:
+        raise ObjectTemplateError(
+            f"Could not load object template file '{file_path}': {error}"
+        ) from error
+
+
+def _load_object_template(file_path: Path, encoding: str) -> Any:
     template_format = check_format(file_path, encoding)
 
     new_tileset = None

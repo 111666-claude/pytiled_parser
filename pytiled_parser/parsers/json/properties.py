@@ -6,7 +6,7 @@ from typing import List, Union, cast
 
 from typing_extensions import TypedDict
 
-from pytiled_parser.properties import Properties, Property
+from pytiled_parser.properties import ObjectRef, Properties, Property
 from pytiled_parser.util import parse_color
 
 RawValue = Union[float, str, bool]
@@ -47,6 +47,8 @@ def parse(raw_properties: List[RawProperty]) -> Properties:
                 value = parse_color(cast(str, raw_property["value"]))
             elif raw_property["type"] == "int":
                 value = round(cast(float, raw_property["value"]))
+            elif raw_property["type"] == "object":
+                value = ObjectRef(raw_property["value"])
             else:
                 value = raw_property["value"]
             final[raw_property["name"]] = value

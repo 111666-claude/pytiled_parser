@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<template>
+ <object id="1" name="templated" x="0" y="0" width="8" height="8">
+  <properties>
+   <property name="target" type="object" value="1"/>
+   <property name="label" type="string" value="from-template"/>
+  </properties>
+ </object>
+</template>

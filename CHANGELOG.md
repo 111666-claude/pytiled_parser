@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [Unreleased]
+
+Added object reference resolution for `object` type custom properties. These properties are now parsed into `pytiled_parser.ObjectRef` values, which preserve the raw value from the map file. The new `pytiled_parser.resolve_object_references()` function resolves them per-map to the actual `TiledObject` instances, covering properties on the map, layers (including group layers), objects, tilesets, and tiles. Object IDs are looked up across all object layers, including objects created from object templates (with their overridden properties applied). The result contains per-property resolutions or errors keyed by property path, covering references to missing or duplicated object IDs, ID 0, non-integer values, and circular references.
+
+Errors while loading object template files (missing, unreadable, or invalid files) now raise `pytiled_parser.ObjectTemplateError`, whose message contains the path of the template file that failed to load.
+
 ## [2.2.9] - 2025-01-23
 
 Fixes a bug where object templates would cause an error when used inside of TileSet. This occurs when using an object template to define collision details on a tile within a tileset. See #82.

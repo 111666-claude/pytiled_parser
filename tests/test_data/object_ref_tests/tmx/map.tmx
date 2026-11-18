@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.10.2" orientation="orthogonal" renderorder="right-down" width="10" height="10" tilewidth="32" tileheight="32" infinite="0" nextlayerid="5" nextobjectid="11">
+ <properties>
+  <property name="spawn" type="object" value="4"/>
+  <property name="nested" type="object" value="9"/>
+ </properties>
+ <tileset firstgid="1" name="refs" tilewidth="32" tileheight="32" tilecount="1" columns="1">
+  <properties>
+   <property name="tileset_ref" type="object" value="2"/>
+  </properties>
+  <image source="../images/tile_01.png" width="32" height="32"/>
+  <tile id="0">
+   <properties>
+    <property name="tile_ref" type="object" value="3"/>
+   </properties>
+  </tile>
+ </tileset>
+ <objectgroup id="1" name="layer_a">
+  <properties>
+   <property name="entry" type="object" value="1"/>
+  </properties>
+  <object id="1" name="portal_a" x="0" y="0" width="10" height="10">
+   <properties>
+    <property name="target" type="object" value="4"/>
+   </properties>
+  </object>
+  <object id="2" name="portal_b" x="20" y="0" width="10" height="10">
+   <properties>
+    <property name="target" type="object" value="1"/>
+   </properties>
+   <ellipse/>
+  </object>
+  <object id="3" template="template.tx" x="40" y="40">
+   <properties>
+    <property name="target" type="object" value="2"/>
+   </properties>
+  </object>
+  <object id="7" name="dup_a" x="0" y="20" width="5" height="5"/>
+ </objectgroup>
+ <objectgroup id="2" name="layer_b">
+  <object id="4" name="spawn" x="50" y="50">
+   <point/>
+  </object>
+  <object id="5" name="cycle_a" x="0" y="0" width="1" height="1">
+   <properties>
+    <property name="target" type="object" value="6"/>
+   </properties>
+  </object>
+  <object id="6" name="cycle_b" x="0" y="0" width="1" height="1">
+   <properties>
+    <property name="target" type="object" value="5"/>
+   </properties>
+  </object>
+  <object id="7" name="dup_b" x="10" y="20" width="5" height="5"/>
+  <object id="8" name="errors" x="0" y="0" width="1" height="1">
+   <properties>
+    <property name="missing_target" type="object" value="999"/>
+    <property name="zero_target" type="object" value="0"/>
+    <property name="bad_target" type="object" value="nope"/>
+    <property name="dup_target" type="object" value="7"/>
+   </properties>
+  </object>
+ </objectgroup>
+ <group id="3" name="group">
+  <objectgroup id="4" name="layer_c">
+   <object id="9" name="nested" x="5" y="5" width="2" height="2"/>
+   <object id="10" name="nested_ref" x="6" y="6" width="2" height="2">
+    <properties>
+     <property name="target" type="object" value="1"/>
+    </properties>
+   </object>
+  </objectgroup>
+ </group>
+</map>

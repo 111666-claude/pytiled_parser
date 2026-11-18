@@ -1,7 +1,7 @@
 import xml.etree.ElementTree as etree
 from pathlib import Path
 
-from pytiled_parser.properties import Properties, Property, ClassProperty
+from pytiled_parser.properties import ClassProperty, ObjectRef, Properties, Property
 from pytiled_parser.util import parse_color
 
 
@@ -24,6 +24,8 @@ def parse(raw_properties: etree.Element) -> Properties:
 
         if type_ == "file":
             value = Path(value_)
+        elif type_ == "object":
+            value = ObjectRef(value_)
         elif type_ == "color":
             value = parse_color(value_)
         elif type_ == "int":
