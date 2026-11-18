@@ -43,3 +43,23 @@ class OrderedPair(NamedTuple):
 
     x: float
     y: float
+
+
+class Rect(NamedTuple):
+    """Represents an axis aligned rectangle as a position paired with a size.
+
+    All values are in pixels. The rectangle covers the half-open interval
+    ``[x, x + width)`` by ``[y, y + height)``, matching how pixel rectangles
+    are typically handled in 2D rendering.
+
+    Attributes:
+        x: X coordinate of the rectangle's top left corner.
+        y: Y coordinate of the rectangle's top left corner.
+        width: Width of the rectangle.
+        height: Height of the rectangle.
+    """
+
+    x: float
+    y: float
+    width: float
+    height: float

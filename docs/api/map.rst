@@ -8,3 +8,4 @@ TiledMap
 ^^^^^^^^
 
 .. autoclass:: pytiled_parser.tiled_map.TiledMap
+    :members:

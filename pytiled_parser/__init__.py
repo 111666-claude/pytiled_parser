@@ -11,8 +11,9 @@ PyTiled Parser is not tied to any particular graphics library or game engine.
 
 # pylint: disable=too-few-public-methods
 
-from .common_types import Color, OrderedPair, Size
+from .common_types import Color, OrderedPair, Rect, Size
 from .exception import UnknownFormat
+from .image_layer import ImageLayerPlacement, visible_image_layer_placements
 from .layer import Chunk, ImageLayer, Layer, LayerGroup, ObjectLayer, TileLayer
 from .parser import parse_map, parse_world, parse_tileset
 from .properties import Properties, Property
@@ -23,10 +24,12 @@ from .world import World, WorldMap
 __all__ = [
     "Color",
     "OrderedPair",
+    "Rect",
     "Size",
     "UnknownFormat",
     "Chunk",
     "ImageLayer",
+    "ImageLayerPlacement",
     "Layer",
     "LayerGroup",
     "ObjectLayer",
@@ -37,6 +40,7 @@ __all__ = [
     "Properties",
     "Property",
     "TiledMap",
+    "visible_image_layer_placements",
     "Frame",
     "Grid",
     "Tile",

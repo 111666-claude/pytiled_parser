@@ -3,14 +3,17 @@ map from Tiled.
 """
 
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 import attr
 
-from pytiled_parser.common_types import Color, OrderedPair, Size
+from pytiled_parser.common_types import Color, OrderedPair, Rect, Size
 from pytiled_parser.layer import Layer
 from pytiled_parser.properties import Properties
 from pytiled_parser.tileset import Tileset
+
+if TYPE_CHECKING:
+    from pytiled_parser.image_layer import ImageLayerPlacement, ImageSizeQuery
 
 TilesetDict = Dict[int, Tileset]
 
@@ -76,3 +79,35 @@ class TiledMap:
     hex_side_length: Optional[int] = None
     stagger_axis: Optional[str] = None
     stagger_index: Optional[str] = None
+
+    def visible_image_layer_placements(
+        self,
+        camera_position: OrderedPair,
+        viewport: Rect,
+        image_size_query: "ImageSizeQuery",
+    ) -> List["ImageLayerPlacement"]:
+        """Return the visible placements of every image layer in this map.
+
+        This is a convenience wrapper around
+        :func:`pytiled_parser.image_layer.visible_image_layer_placements`
+        which passes this map in as the first argument. See that function for
+        full documentation of the arguments, return value and edge cases.
+
+        Args:
+            camera_position: The top left corner of the viewport in map pixel
+                coordinates.
+            viewport: The viewport rectangle in map pixel coordinates.
+            image_size_query: Callable mapping an image layer's image path to
+                its pixel :class:`Size`.
+
+        Returns:
+            A list of image layer placements ordered by layer draw order and
+            then placement order.
+        """
+        from pytiled_parser.image_layer import (
+            visible_image_layer_placements as _visible_image_layer_placements,
+        )
+
+        return _visible_image_layer_placements(
+            self, camera_position, viewport, image_size_query
+        )

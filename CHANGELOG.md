@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [Unreleased]
+
+Added a visible image layer placement query, `visible_image_layer_placements()`, along with a matching `TiledMap.visible_image_layer_placements()` method and a new `Rect` common type. Given a camera position, a viewport rectangle and an image size query callable, it returns every visible repetition of each image layer with its image path, target rectangle, viewport clipping rectangle, source rectangle, effective opacity and repeat indices. It accounts for the map parallax origin, layer and nested group offsets, multiplied group parallax factors, multiplied effective opacity and ancestry visibility, while honoring the independent `repeat_x`/`repeat_y` flags. Results are ordered by layer draw order then placement order, and edge cases such as negative coordinates, fractional parallax factors, images smaller than the viewport, single axis repetition, zero sized images and invalid viewports have deterministic results.
+
+The TMX parser now falls back to the deprecated `x`/`y` image layer attributes as the layer offset when no `offsetx`/`offsety` attributes are present, matching Tiled's own backwards compatible handling of old map files.
+
 ## [2.2.8] - 2025-01-16
 
 Add explicit support for 3.13, previous versions work on 3.13 but it was not explicitly labeled as supported or being tested by CI.

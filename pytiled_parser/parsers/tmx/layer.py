@@ -1,5 +1,4 @@
-"""Layer parsing for the TMX Map Format.
-"""
+"""Layer parsing for the TMX Map Format."""
 
 import base64
 import gzip
@@ -309,6 +308,19 @@ def _parse_image_layer(raw_layer: etree.Element) -> ImageLayer:
             transparent_color=transparent_color,
             **_parse_common(raw_layer).__dict__,
         )
+
+        # The image layer pixel position used to be stored in the deprecated
+        # "x"/"y" attributes before "offsetx"/"offsety" were introduced. Tiled
+        # falls back to "x"/"y" when no explicit offset is present, so we do
+        # the same for backwards compatibility with old map files.
+        if raw_layer.attrib.get("offsetx") is None and (
+            raw_layer.attrib.get("x") is not None
+            or raw_layer.attrib.get("y") is not None
+        ):
+            image_layer.offset = OrderedPair(
+                float(raw_layer.attrib.get("x", 0)),
+                float(raw_layer.attrib.get("y", 0)),
+            )
 
         return image_layer
 

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.10.2" orientation="orthogonal" renderorder="right-down" compressionlevel="-1" width="8" height="10" tilewidth="32" tileheight="32" infinite="0" parallaxoriginx="50" parallaxoriginy="25" nextlayerid="9" nextobjectid="1">
+ <tileset firstgid="1" source="tileset.tsx"/>
+ <imagelayer id="1" name="Far Mountains" offsetx="10" offsety="20" parallaxx="0.25" parallaxy="0.5" repeatx="1" repeaty="0">
+  <image source="images/far_mountains.png"/>
+ </imagelayer>
+ <group id="2" name="Scenery Group" offsetx="100" offsety="50" parallaxx="0.5" parallaxy="2" opacity="0.5">
+  <imagelayer id="4" name="Mid Hills" offsetx="30" offsety="40" parallaxx="0.5" parallaxy="0.75" opacity="0.8" repeatx="1" repeaty="1">
+   <image source="images/mid_hills.png"/>
+  </imagelayer>
+  <group id="5" name="Inner Group" offsetx="12" offsety="-8" parallaxx="2" parallaxy="1" opacity="0.5">
+   <imagelayer id="7" name="Near Trees" offsetx="-15" offsety="120" repeatx="0" repeaty="0" opacity="0.5">
+    <image source="images/near_trees.png"/>
+   </imagelayer>
+   <imagelayer id="8" name="Hidden Duplicate" visible="0" parallaxx="0.25" parallaxy="0.5" repeatx="1" repeaty="1">
+    <image source="images/far_mountains.png"/>
+   </imagelayer>
+  </group>
+ </group>
+ <imagelayer id="3" name="Zero Size" repeatx="1" repeaty="1">
+  <image source="images/empty.png"/>
+ </imagelayer>
+ <layer id="6" name="Ground" width="8" height="10">
+  <data>
+   1,1,1,1,1,1,1,1,
+   1,1,1,1,1,1,1,1,
+   1,1,1,1,1,1,1,1,
+   1,1,1,1,1,1,1,1,
+   1,1,1,1,1,1,1,1,
+   1,1,1,1,1,1,1,1,
+   1,1,1,1,1,1,1,1,
+   1,1,1,1,1,1,1,1,
+   1,1,1,1,1,1,1,1,
+   1,1,1,1,1,1,1,1
+  </data>
+ </layer>
+</map>
