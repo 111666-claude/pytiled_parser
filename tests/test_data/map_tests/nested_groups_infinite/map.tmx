@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.9" tiledversion="1.9.2" orientation="orthogonal" renderorder="right-down" width="8" height="6" tilewidth="32" tileheight="32" infinite="1" nextlayerid="5" nextobjectid="1">
+ <tileset firstgid="1" source="../nested_groups/tileset.tsx"/>
+ <layer id="1" name="Infinite Base" width="8" height="8">
+  <data encoding="csv">
+   <chunk x="-4" y="-4" width="4" height="4">
+1,1,1,1,
+1,1,1,1,
+1,1,1,1,
+1,1,1,1
+</chunk>
+   <chunk x="0" y="0" width="4" height="4">
+2,2,2,2,
+2,2,2,2,
+2,2,2,2,
+2,2,2,2
+</chunk>
+  </data>
+ </layer>
+ <group id="2" name="Infinite Group" offsetx="0" offsety="32" opacity="0.5" tintcolor="#0000ff">
+  <layer id="3" name="Nested Negative" width="4" height="4" opacity="0.5" tintcolor="#ff0000">
+   <data encoding="csv">
+    <chunk x="-4" y="-4" width="4" height="4">
+3,0,0,0,
+0,0,0,0,
+0,0,0,0,
+0,0,0,0
+</chunk>
+   </data>
+  </layer>
+  <layer id="4" name="Nested Flipped" width="4" height="4">
+   <data encoding="csv">
+    <chunk x="0" y="0" width="4" height="4">
+0,0,0,0,
+0,2684354569,0,0,
+0,0,0,0,
+0,0,0,0
+</chunk>
+   </data>
+  </layer>
+ </group>
+</map>

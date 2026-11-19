@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [Unreleased]
+
+Adds effective layer queries for working with group layers. Previously, group layer opacity, offset and tint color were not applied to child layers during parsing, and implementations had to compute the effective values themselves. The new `get_effective_tile_layers()` function takes a parsed map and a pixel coordinate, and returns every visible tile layer covering that point in draw order, each as an `EffectiveTileLayer` with the recursively composed effective opacity, offset and tint color, plus the global tile ID (with flip flags decoded) and the covering tile's cell coordinates. A companion `iter_effective_tile_layers()` flattens a layer tree without a point query, and `decode_gid()` splits the horizontal, vertical and diagonal flip flags off a raw global tile ID.
+
+Both fixed size maps and infinite map chunks (including negative chunk coordinates) are supported, along with flipped global tile IDs. The parsed layer objects are never modified; all composed values are returned in new objects. Queries at negative coordinates and through non-integer offsets use floor division to resolve the cell. Hidden ancestors prune their entire subtree, empty cells and empty layers are skipped, cyclic group structures raise `CyclicLayerGroupError`, out of range tint colors raise `InvalidTintColorError`, and non-orthogonal map orientations raise `UnsupportedOrientationError`.
+
 ## [2.2.9] - 2025-01-23
 
 Fixes a bug where object templates would cause an error when used inside of TileSet. This occurs when using an object template to define collision details on a tile within a tileset. See #82.
