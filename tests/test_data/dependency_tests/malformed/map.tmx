@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.10.2" orientation="orthogonal" renderorder="right-down" width="2" height="2" tilewidth="32" tileheight="32" infinite="0" nextlayerid="2" nextobjectid="1">
+ <properties>
+  <property name="no value" type="file"/>
+  <property type="file" value="../existing_outside.txt"/>
+ </properties>
+ <tileset firstgid="1" source="tilesets/bad_tiles.tsx"/>
+</map>

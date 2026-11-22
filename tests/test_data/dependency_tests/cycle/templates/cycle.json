@@ -1,0 +1,17 @@
+{
+ "object": {
+  "gid": 1,
+  "height": 32,
+  "id": 1,
+  "name": "",
+  "rotation": 0,
+  "class": "",
+  "visible": true,
+  "width": 32
+ },
+ "tileset": {
+  "firstgid": 1,
+  "source": "..\/tilesets\/cycle_a.json"
+ },
+ "type": "template"
+}

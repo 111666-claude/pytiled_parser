@@ -1,0 +1,8 @@
+{
+ "columns": 1,
+ "name": "bad_properties",
+ "properties": [5],
+ "tilecount": 1,
+ "tileheight": 32,
+ "tilewidth": 32
+}

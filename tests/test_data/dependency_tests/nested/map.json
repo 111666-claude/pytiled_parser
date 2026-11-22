@@ -1,0 +1,120 @@
+{
+ "compressionlevel": -1,
+ "height": 4,
+ "infinite": false,
+ "layers": [
+  {
+   "id": 1,
+   "image": "art/one/shared.png",
+   "name": "Root Image",
+   "opacity": 1,
+   "type": "imagelayer",
+   "visible": true,
+   "x": 0,
+   "y": 0,
+   "properties": [
+    {
+     "name": "layer config",
+     "type": "file",
+     "value": "props/config.txt"
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "layers": [
+    {
+     "id": 3,
+     "layers": [
+      {
+       "id": 4,
+       "image": "art/two/shared.png",
+       "name": "Deep Image",
+       "opacity": 1,
+       "type": "imagelayer",
+       "visible": true,
+       "x": 0,
+       "y": 0
+      }
+     ],
+     "name": "Outer Group",
+     "opacity": 1,
+     "type": "group",
+     "visible": true,
+     "x": 0,
+     "y": 0
+    }
+   ],
+   "name": "Middle Group",
+   "opacity": 1,
+   "type": "group",
+   "visible": true,
+   "x": 0,
+   "y": 0
+  },
+  {
+   "draworder": "topdown",
+   "id": 5,
+   "name": "Objects",
+   "objects": [
+    {
+     "id": 1,
+     "template": "templates/template_a.json",
+     "x": 0,
+     "y": 0
+    },
+    {
+     "id": 2,
+     "template": "templates/template_b.json",
+     "x": 32,
+     "y": 0
+    },
+    {
+     "id": 3,
+     "template": "templates/template_c.json",
+     "x": 64,
+     "y": 0,
+     "properties": [
+      {
+       "name": "object config",
+       "type": "file",
+       "value": "props/config.txt"
+      }
+     ]
+    }
+   ],
+   "opacity": 1,
+   "type": "objectgroup",
+   "visible": true,
+   "x": 0,
+   "y": 0
+  }
+ ],
+ "nextlayerid": 6,
+ "nextobjectid": 4,
+ "orientation": "orthogonal",
+ "properties": [
+  {
+   "name": "config",
+   "type": "file",
+   "value": "props/config.txt"
+  }
+ ],
+ "renderorder": "right-down",
+ "tiledversion": "1.10.2",
+ "tileheight": 32,
+ "tilesets": [
+  {
+   "firstgid": 1,
+   "source": "tilesets/tileset_a.json"
+  },
+  {
+   "firstgid": 100,
+   "source": "tilesets/tileset_b.tsx"
+  }
+ ],
+ "tilewidth": 32,
+ "type": "map",
+ "version": "1.10",
+ "width": 4
+}

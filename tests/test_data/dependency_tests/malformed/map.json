@@ -1,0 +1,70 @@
+{
+ "height": 2,
+ "infinite": false,
+ "layers": [
+  {
+   "id": 1,
+   "image": "art/missing.png",
+   "name": "Image",
+   "opacity": 1,
+   "type": "imagelayer",
+   "visible": true,
+   "x": 0,
+   "y": 0
+  },
+  {
+   "draworder": "topdown",
+   "id": 2,
+   "name": "Objects",
+   "objects": [
+    {
+     "id": 1,
+     "template": "templates/bad_tileset.json",
+     "x": 0,
+     "y": 0
+    }
+   ],
+   "opacity": 1,
+   "type": "objectgroup",
+   "visible": true,
+   "x": 0,
+   "y": 0
+  }
+ ],
+ "nextlayerid": 3,
+ "nextobjectid": 2,
+ "orientation": "orthogonal",
+ "renderorder": "right-down",
+ "tiledversion": "1.10.2",
+ "tileheight": 32,
+ "tilesets": [
+  {
+   "firstgid": 1,
+   "source": "tilesets/bad_tiles.json"
+  },
+  {
+   "firstgid": 100,
+   "source": "tilesets/bad_properties.json"
+  },
+  {
+   "firstgid": 200,
+   "source": "tilesets/bad_layers.json"
+  }
+ ],
+ "tilewidth": 32,
+ "type": "map",
+ "version": "1.10",
+ "width": 2,
+ "properties": [
+  {
+   "type": "file",
+   "value": "../existing_outside.txt"
+  },
+  {
+   "name": "plain",
+   "type": "string",
+   "value": "hello"
+  },
+  5
+ ]
+}

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.10.2" orientation="orthogonal" renderorder="right-down" compressionlevel="-1" width="4" height="4" tilewidth="32" tileheight="32" infinite="0" nextlayerid="6" nextobjectid="4">
+ <properties>
+  <property name="config" type="file" value="props/config.txt"/>
+ </properties>
+ <tileset firstgid="1" source="tilesets/tileset_a.tsx"/>
+ <tileset firstgid="100" source="tilesets/tileset_b.json"/>
+ <imagelayer id="1" name="Root Image">
+  <properties>
+   <property name="layer config" type="file" value="props/config.txt"/>
+  </properties>
+  <image source="art/one/shared.png" width="32" height="32"/>
+ </imagelayer>
+ <group id="2" name="Middle Group">
+  <group id="3" name="Outer Group">
+   <imagelayer id="4" name="Deep Image">
+    <image source="art/two/shared.png" width="32" height="32"/>
+   </imagelayer>
+  </group>
+ </group>
+ <objectgroup id="5" name="Objects">
+  <object id="1" template="templates/template_a.tx" x="0" y="0"/>
+  <object id="2" template="templates/template_b.tx" x="32" y="0"/>
+  <object id="3" template="templates/template_c.tx" x="64" y="0">
+   <properties>
+    <property name="object config" type="file" value="props/config.txt"/>
+   </properties>
+  </object>
+ </objectgroup>
+</map>

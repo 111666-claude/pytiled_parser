@@ -1,0 +1,39 @@
+{
+ "object": {
+  "gid": 1,
+  "height": 32,
+  "id": 1,
+  "name": "",
+  "rotation": 0,
+  "class": "",
+  "visible": true,
+  "width": 32
+ },
+ "tileset": {
+  "columns": 1,
+  "firstgid": 1,
+  "image": "sheet.png",
+  "imageheight": 32,
+  "imagewidth": 32,
+  "margin": 0,
+  "name": "embedded_template",
+  "spacing": 0,
+  "tilecount": 1,
+  "tileheight": 32,
+  "tilewidth": 32,
+  "tiles": [
+        {
+         "id": 0,
+         "image": "tile.png",
+         "imageheight": 32,
+         "imagewidth": 32
+        }],
+  "properties": [
+        {
+         "name": "embedded config",
+         "type": "file",
+         "value": "..\/props\/embedded.txt"
+        }]
+ },
+ "type": "template"
+}

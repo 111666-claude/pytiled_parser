@@ -1,0 +1,25 @@
+{
+ "compressionlevel": -1,
+ "height": 2,
+ "infinite": false,
+ "layers": [],
+ "nextlayerid": 1,
+ "nextobjectid": 1,
+ "orientation": "orthogonal",
+ "renderorder": "right-down",
+ "tiledversion": "1.10.2",
+ "tileheight": 32,
+ "tilesets": [
+        {
+         "firstgid": 1,
+         "source": "tilesets\/a\/tileset.json"
+        },
+        {
+         "firstgid": 100,
+         "source": "tilesets\/b\/tileset.json"
+        }],
+ "tilewidth": 32,
+ "type": "map",
+ "version": "1.10",
+ "width": 2
+}

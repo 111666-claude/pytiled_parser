@@ -1,0 +1,40 @@
+{
+ "columns": 1,
+ "image": "../art/one/shared.png",
+ "imageheight": 32,
+ "imagewidth": 32,
+ "margin": 0,
+ "name": "tileset_a",
+ "spacing": 0,
+ "tilecount": 2,
+ "tiledversion": "1.10.2",
+ "tileheight": 32,
+ "tiles": [
+  {
+   "id": 0,
+   "image": "../art/two/shared.png",
+   "imageheight": 32,
+   "imagewidth": 32
+  },
+  {
+   "id": 1,
+   "properties": [
+    {
+     "name": "tile config",
+     "type": "file",
+     "value": "../props/config.txt"
+    }
+   ]
+  }
+ ],
+ "tilewidth": 32,
+ "type": "tileset",
+ "version": "1.10",
+ "properties": [
+  {
+   "name": "config",
+   "type": "file",
+   "value": "../props/config.txt"
+  }
+ ]
+}

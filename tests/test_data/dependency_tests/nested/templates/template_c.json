@@ -1,0 +1,19 @@
+{
+ "object": {
+  "height": 32,
+  "id": 1,
+  "name": "",
+  "rotation": 0,
+  "class": "",
+  "visible": true,
+  "width": 32,
+  "properties": [
+   {
+    "name": "template config",
+    "type": "file",
+    "value": "../props/config.txt"
+   }
+  ]
+ },
+ "type": "template"
+}

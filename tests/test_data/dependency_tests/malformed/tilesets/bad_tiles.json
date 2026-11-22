@@ -1,0 +1,8 @@
+{
+ "columns": 1,
+ "name": "bad_tiles",
+ "tilecount": 1,
+ "tiles": [5],
+ "tileheight": 32,
+ "tilewidth": 32
+}

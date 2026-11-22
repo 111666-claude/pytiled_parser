@@ -1,0 +1,13 @@
+{
+ "columns": 1,
+ "name": "bad_layers",
+ "tilecount": 1,
+ "tileheight": 32,
+ "tiles": [
+  {
+   "id": 0,
+   "objectgroup": {"objects": [5]}
+  }
+ ],
+ "tilewidth": 32
+}

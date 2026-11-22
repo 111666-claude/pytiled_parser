@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<template>
+ <tileset firstgid="1" name="embedded_template" tilewidth="32" tileheight="32" tilecount="1" columns="1">
+  <image source="sheet.png" width="32" height="32"/>
+  <tile id="0">
+   <image source="tile.png" width="32" height="32"/>
+  </tile>
+  <properties>
+   <property name="embedded config" type="file" value="../props/embedded.txt"/>
+  </properties>
+ </tileset>
+ <object gid="1" width="32" height="32"/>
+</template>

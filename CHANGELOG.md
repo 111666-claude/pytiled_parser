@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [Unreleased]
+
+Adds `pytiled_parser.collect_dependencies()` and `pytiled_parser.check_dependencies()`, which build an inventory of every external file a map depends on. Parsing only reads the map, its external tilesets and its templates; images, tile images and `file` properties are stored as paths and are never opened, so a level that parses fine can still miss files when it is packaged. The new functions walk the map, its external tilesets and its object templates recursively and return a `DependencyManifest` listing each referenced file exactly once, with its canonical path, resource type and every place it is referenced from. A file used by several tilesets, tiles or layers appears once and keeps one source entry per reference.
+
+Relative paths are resolved against the directory of the file containing the reference, so resources referenced by external tilesets and templates resolve correctly when those live in other directories. Both the JSON and the TMX format are understood for maps, tilesets and templates, including tilesets of one format referenced from a file of the other. References are walked depth first, tilesets and templates are followed recursively, and cycles are reported instead of being followed forever.
+
+The manifest can be built in report-only mode, or with file existence checks using `check_dependencies()` (or `collect_dependencies(..., check_exists=True)`). Missing files, paths resolving outside of the root (the map's directory by default, configurable with `root`) and unsupported references are returned as issues carrying the file and location of the reference, rather than raised. The result of `parse_map()` is unchanged and the parsed objects are never modified.
+
 ## [2.2.8] - UNRELEASED
 
 Add explicit support for 3.13, previous versions work on 3.13 but it was not explicitly labeled as supported or being tested by CI.

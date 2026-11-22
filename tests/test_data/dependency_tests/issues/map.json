@@ -1,0 +1,120 @@
+{
+ "compressionlevel": -1,
+ "height": 4,
+ "infinite": false,
+ "layers": [
+  {
+   "id": 1,
+   "image": "art/missing.png",
+   "name": "Missing Image",
+   "opacity": 1,
+   "type": "imagelayer",
+   "visible": true,
+   "x": 0,
+   "y": 0
+  },
+  {
+   "id": 2,
+   "image": "art/present.png",
+   "name": "Present Image",
+   "opacity": 1,
+   "type": "imagelayer",
+   "visible": true,
+   "x": 0,
+   "y": 0
+  },
+  {
+   "id": 3,
+   "layers": [
+    {
+     "id": 4,
+     "image": "art/present.png",
+     "name": "Nested Present Image",
+     "opacity": 1,
+     "type": "imagelayer",
+     "visible": true,
+     "x": 0,
+     "y": 0
+    }
+   ],
+   "name": "Group",
+   "opacity": 1,
+   "type": "group",
+   "visible": true,
+   "x": 0,
+   "y": 0
+  },
+  {
+   "draworder": "topdown",
+   "id": 5,
+   "name": "Objects",
+   "objects": [
+    {
+     "id": 1,
+     "template": "templates/missing.json",
+     "x": 0,
+     "y": 0
+    },
+    {
+     "id": 2,
+     "template": "templates/corrupt.json",
+     "x": 32,
+     "y": 0
+    },
+    {
+     "id": 3,
+     "template": "templates/no_object.json",
+     "x": 64,
+     "y": 0
+    }
+   ],
+   "opacity": 1,
+   "type": "objectgroup",
+   "visible": true,
+   "x": 0,
+   "y": 0
+  }
+ ],
+ "nextlayerid": 6,
+ "nextobjectid": 4,
+ "orientation": "orthogonal",
+ "properties": [
+  {
+   "name": "missing file",
+   "type": "file",
+   "value": "props/missing.txt"
+  },
+  {
+   "name": "outside file",
+   "type": "file",
+   "value": "../existing_outside.txt"
+  },
+  {
+   "name": "bad value",
+   "type": "file",
+   "value": 5
+  },
+  {
+   "name": "blank value",
+   "type": "file",
+   "value": "   "
+  }
+ ],
+ "renderorder": "right-down",
+ "tiledversion": "1.10.2",
+ "tileheight": 32,
+ "tilesets": [
+  {
+   "firstgid": 1,
+   "source": "tilesets/missing.json"
+  },
+  {
+   "firstgid": 100,
+   "source": "tilesets/present.json"
+  }
+ ],
+ "tilewidth": 32,
+ "type": "map",
+ "version": "1.10",
+ "width": 4
+}

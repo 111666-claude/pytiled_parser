@@ -1,0 +1,7 @@
+{
+ "tileset": {
+  "firstgid": 1,
+  "source": "..\/tilesets\/present.json"
+ },
+ "type": "template"
+}
