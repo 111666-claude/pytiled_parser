@@ -1,8 +1,10 @@
 import json
 import xml.etree.ElementTree as etree
 from pathlib import Path
+from typing import Optional
 
 from pytiled_parser import UnknownFormat
+from pytiled_parser.budget import ParseBudget, BudgetTracker
 from pytiled_parser.parsers.json.tiled_map import parse as json_map_parse
 from pytiled_parser.parsers.json.tileset import parse as json_tileset_parse
 from pytiled_parser.parsers.tmx.tiled_map import parse as tmx_map_parse
@@ -14,12 +16,19 @@ from pytiled_parser.world import World
 from pytiled_parser.world import parse_world as _parse_world
 
 
-def parse_map(file: Path, encoding: str = "utf-8") -> TiledMap:
+def parse_map(
+    file: Path, encoding: str = "utf-8", budget: Optional[ParseBudget] = None
+) -> TiledMap:
     """Parse the raw Tiled map into a pytiled_parser type
 
     Args:
         file: Path to the map file
         encoding: The character encoding set to use when opening the file
+        budget: Resource limits to enforce while parsing (input size, layer
+            and object counts, tiles per layer, decompressed data size, and
+            group nesting depth). A ParseBudget with default limits — far
+            beyond any normal map — is used if none is supplied. Parsing
+            raises BudgetExceededError when a limit is exceeded.
 
     Returns:
         TiledMap: A parsed and typed TiledMap
@@ -28,10 +37,10 @@ def parse_map(file: Path, encoding: str = "utf-8") -> TiledMap:
 
     # The type ignores are because mypy for some reason thinks those functions return Any
     if parser == "tmx":
-        return tmx_map_parse(file, encoding)  # type: ignore
+        return tmx_map_parse(file, encoding, budget)  # type: ignore
     else:
         try:
-            return json_map_parse(file, encoding)  # type: ignore
+            return json_map_parse(file, encoding, budget)  # type: ignore
         except ValueError:
             raise UnknownFormat(
                 "Unknown Map Format, please use either the TMX or JSON format. "
@@ -39,16 +48,23 @@ def parse_map(file: Path, encoding: str = "utf-8") -> TiledMap:
             )
 
 
-def parse_tileset(file: Path, encoding: str = "utf-8") -> Tileset:
+def parse_tileset(
+    file: Path, encoding: str = "utf-8", budget: Optional[ParseBudget] = None
+) -> Tileset:
     """Parse the raw Tiled Tileset into a pytiled_parser type
 
     Args:
         file: Path to the map file
         encoding: The character encoding set to use when opening the file
+        budget: Resource limits to enforce while parsing. A ParseBudget with
+            default limits is used if none is supplied.
 
     Returns:
         Tileset: A parsed and typed Tileset
     """
+    tracker = BudgetTracker(budget, file)
+    tracker.check_input_file(file)
+
     parser = check_format(file, encoding)
 
     if parser == "tmx":

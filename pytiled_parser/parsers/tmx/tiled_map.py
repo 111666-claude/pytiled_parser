@@ -1,7 +1,9 @@
 import json
 import xml.etree.ElementTree as etree
 from pathlib import Path
+from typing import Optional
 
+from pytiled_parser.budget import ParseBudget, BudgetTracker
 from pytiled_parser.common_types import OrderedPair, Size
 from pytiled_parser.exception import UnknownFormat
 from pytiled_parser.parsers.json.tileset import parse as parse_json_tileset
@@ -12,15 +14,20 @@ from pytiled_parser.tiled_map import TiledMap, TilesetDict
 from pytiled_parser.util import check_format, parse_color
 
 
-def parse(file: Path, encoding: str) -> TiledMap:
+def parse(file: Path, encoding: str, budget: Optional[ParseBudget] = None) -> TiledMap:
     """Parse the raw Tiled map into a pytiled_parser type.
 
     Args:
         file: Path to the map file.
+        budget: Resource limits to enforce while parsing. A ParseBudget with
+            default limits is used if none is supplied.
 
     Returns:
         TiledMap: A parsed TiledMap.
     """
+    tracker = BudgetTracker(budget, file)
+    tracker.check_input_file(file)
+
     with open(file, encoding=encoding) as map_file:
         raw_map = etree.parse(map_file).getroot()
 
@@ -33,6 +40,7 @@ def parse(file: Path, encoding: str) -> TiledMap:
         if raw_tileset.attrib.get("source") is not None:
             # Is an external Tileset
             tileset_path = Path(parent_dir / raw_tileset.attrib["source"])
+            tracker.check_input_file(tileset_path)
             parser = check_format(tileset_path, encoding)
             with open(tileset_path, encoding=encoding) as tileset_file:
                 if parser == "tmx":
@@ -64,7 +72,7 @@ def parse(file: Path, encoding: str) -> TiledMap:
     layers = []
     for element in raw_map.findall("./*"):
         if element.tag in ["layer", "objectgroup", "imagelayer", "group"]:
-            layers.append(parse_layer(element, encoding, parent_dir))
+            layers.append(parse_layer(element, encoding, parent_dir, tracker))
 
     map_ = TiledMap(
         map_file=file,
