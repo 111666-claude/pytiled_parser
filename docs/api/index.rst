@@ -22,5 +22,6 @@ cover some of the concepts surrounding that module and it's usage within Tiled.
     layer
     objects
     map
+    diff
     wang_set
     world
