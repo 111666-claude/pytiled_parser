@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [Unreleased]
+
+Adds viewport tile queries through a new `pytiled_parser.viewport` module and the top level `get_viewport_tiles()` / `iter_viewport_tiles()` functions. Given a parsed `TileLayer`, `TiledMap`, layer group or iterable of layers, and a rectangle in global tile coordinates, they return only the non-empty tiles that intersect that rectangle. Finite (`data`) and infinite (`chunks`) layers share the same entry point, and `TileLayer` gains `get_viewport_tiles()` / `iter_viewport_tiles()` convenience methods.
+
+Queries support negative coordinates, non-square and overlapping chunks, flip/rotation flag bits in the raw GID, and half-open rectangles. Only the cells that intersect the rectangle are inspected, so a small camera window over a huge sparse map does not expand the map, and zero/negative sized viewports return immediately. Chunks are applied in file order, matching Tiled's reader: a later chunk overrides an earlier one for shared cells, and an empty cell in the later chunk clears the earlier value. Results are ordered row by row within each layer (ascending `y`, then ascending `x`), with map layers in draw order and group children expanded in place.
+
 ## [2.2.8] - UNRELEASED
 
 Add explicit support for 3.13, previous versions work on 3.13 but it was not explicitly labeled as supported or being tested by CI.

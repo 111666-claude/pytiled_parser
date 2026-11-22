@@ -10,13 +10,16 @@ For more information about Layers, see [Tiled's Manual](https://doc.mapeditor.or
 # pylint: disable=too-few-public-methods
 
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import TYPE_CHECKING, Iterator, List, Optional, Union
 
 import attr
 
 from pytiled_parser.common_types import Color, OrderedPair, Size
 from pytiled_parser.properties import Properties
 from pytiled_parser.tiled_object import TiledObject
+
+if TYPE_CHECKING:  # pragma: no cover
+    from pytiled_parser.viewport import TileRect, ViewportTile
 
 
 @attr.s(repr=True, str=True, auto_attribs=True, kw_only=True)
@@ -119,6 +122,42 @@ class TileLayer(Layer):
 
     chunks: Optional[List[Chunk]] = None
     data: Optional[List[List[int]]] = None
+
+    def iter_viewport_tiles(self, rect: "TileRect") -> Iterator["ViewportTile"]:
+        """Iterate the non-empty tiles of this layer inside a tile rectangle.
+
+        This is a convenience wrapper around
+        [iter_viewport_tiles][pytiled_parser.viewport.iter_viewport_tiles]
+        for the common single layer case. Both finite (``data``) and infinite
+        (``chunks``) layers are supported by the same call.
+
+        Args:
+            rect: The rectangle to query, in global tile coordinates.
+
+        Returns:
+            Iterator[ViewportTile]: The matching tiles, ordered row by row.
+        """
+        from pytiled_parser.viewport import iter_viewport_tiles
+
+        return iter_viewport_tiles(self, rect)
+
+    def get_viewport_tiles(self, rect: "TileRect") -> List["ViewportTile"]:
+        """Return the non-empty tiles of this layer inside a tile rectangle.
+
+        This is a convenience wrapper around
+        [get_viewport_tiles][pytiled_parser.viewport.get_viewport_tiles] for
+        the common single layer case. Both finite (``data``) and infinite
+        (``chunks``) layers are supported by the same call.
+
+        Args:
+            rect: The rectangle to query, in global tile coordinates.
+
+        Returns:
+            List[ViewportTile]: The matching tiles, ordered row by row.
+        """
+        from pytiled_parser.viewport import get_viewport_tiles
+
+        return get_viewport_tiles(self, rect)
 
 
 @attr.s(auto_attribs=True, kw_only=True)
