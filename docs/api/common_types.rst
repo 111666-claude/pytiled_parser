@@ -22,3 +22,8 @@ Size
 ^^^^
 
 .. autoclass:: pytiled_parser.common_types.Size
+
+Rect
+^^^^
+
+.. autoclass:: pytiled_parser.common_types.Rect

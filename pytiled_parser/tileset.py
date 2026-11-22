@@ -7,7 +7,7 @@ and [JSON Reference](https://doc.mapeditor.org/en/stable/reference/json-map-form
 
 # pylint: disable=too-few-public-methods
 from pathlib import Path
-from typing import Dict, List, NamedTuple, Optional
+from typing import TYPE_CHECKING, Dict, List, NamedTuple, Optional
 
 import attr
 
@@ -15,6 +15,9 @@ from . import layer
 from . import properties as properties_
 from .common_types import Color, OrderedPair
 from .wang_set import WangSet
+
+if TYPE_CHECKING:
+    from .gid import TileSource
 
 
 class Grid(NamedTuple):
@@ -227,3 +230,29 @@ class Tileset:
     tiles: Optional[Dict[int, Tile]] = None
     wang_sets: Optional[List[WangSet]] = None
     alignment: Optional[str] = None
+
+    def get_tile_source(self, gid: int) -> Optional["TileSource"]:
+        """Resolve a raw GID known to belong to this tileset.
+
+        This is a thin convenience wrapper around
+        :func:`pytiled_parser.gid.get_tile_source_from_tileset` for callers
+        which already know this tileset contains the tile.
+
+        Args:
+            gid: The raw, unsigned 32 bit GID including any flip flag bits.
+
+        Returns:
+            A :class:`pytiled_parser.gid.TileSource`, or ``None`` for GID 0.
+
+        Raises:
+            pytiled_parser.gid_exception.InvalidGIDError: For malformed GIDs.
+            pytiled_parser.gid_exception.GIDNotFoundError: When the GID is not
+                within this tileset's ``firstgid``/``tile_count`` range.
+            pytiled_parser.gid_exception.TileImageNotFoundError: When the tile
+                has no usable image.
+            pytiled_parser.gid_exception.TileRectError: When the crop rectangle
+                can not be computed or does not fit the image dimensions.
+        """
+        from .gid import get_tile_source_from_tileset
+
+        return get_tile_source_from_tileset(gid, self)

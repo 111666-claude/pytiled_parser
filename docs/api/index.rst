@@ -19,6 +19,7 @@ cover some of the concepts surrounding that module and it's usage within Tiled.
     common_types
     properties
     tileset
+    gid
     layer
     objects
     map

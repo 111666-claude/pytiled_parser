@@ -43,3 +43,22 @@ class OrderedPair(NamedTuple):
 
     x: float
     y: float
+
+
+class Rect(NamedTuple):
+    """Represents an axis aligned rectangle as a four value Tuple.
+
+    The rectangle is defined by the position of it's upper left corner
+    (`x`, `y`) and it's `width` and `height`. All values are in pixels.
+
+    Attributes:
+        x: X coordinate of the upper left corner in pixels.
+        y: Y coordinate of the upper left corner in pixels.
+        width: Width of the rectangle in pixels.
+        height: Height of the rectangle in pixels.
+    """
+
+    x: int
+    y: int
+    width: int
+    height: int

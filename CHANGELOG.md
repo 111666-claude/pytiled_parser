@@ -4,6 +4,36 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [Unreleased]
+
+Added a tile source (GID) lookup API so renderers no longer have to decode
+GIDs or compute tile crop rectangles themselves.
+
+- `pytiled_parser.get_tile_source(gid, tiled_map_or_tilesets)` resolves a raw
+  GID into a `TileSource` containing the tileset, image path, pixel crop
+  rectangle, horizontal/vertical/diagonal flip flags and the tileset drawing
+  offset. Both spritesheet (atlas) and image collection (per-tile image)
+  tilesets are supported. GID `0` (the empty cell) resolves to `None` and the
+  raw GID is never modified.
+- `pytiled_parser.get_tile_source_from_tileset(gid, tileset)` and the
+  `Tileset.get_tile_source(gid)` convenience method resolve a GID against one
+  known tileset.
+- `pytiled_parser.decode_gid(gid)` splits the Tiled flip flag bits
+  (`FLIP_HORIZONTALLY_FLAG`, `FLIP_VERTICALLY_FLAG`,
+  `FLIP_DIAGONALLY_FLAG`) off of a raw GID.
+- Crop rectangles honor `firstgid`, `margin`, `spacing`, `columns` and
+  `tileoffset`; per-tile images honor the tile's `x`, `y`, `width` and
+  `height`.
+- Malformed inputs produce contextual, deterministic exceptions under
+  `pytiled_parser.gid_exception`, all sharing the `GIDError` base class:
+  invalid GIDs (`InvalidGIDError`), GIDs outside of every tileset range
+  (`GIDNotFoundError`), overlapping tileset ranges
+  (`TilesetOverlapError`, the highest `firstgid` tileset is deterministically
+  selected and exposed as `selected_tileset`), missing images
+  (`TileImageNotFoundError`) and crop rectangles outside of the declared
+  image dimensions or zero-column spritesheets (`TileRectError`).
+- Added the `pytiled_parser.Rect` common type for pixel rectangles.
+
 ## [2.2.5] - 2024-07-01
 
 Adds a `__all__` section to the main library `__init__.py` file which fixes problems when running pyright in strict mode against this library, it would not be able to see the exported types.
