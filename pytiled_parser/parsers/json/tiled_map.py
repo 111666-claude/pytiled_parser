@@ -15,7 +15,7 @@ from pytiled_parser.parsers.json.tileset import RawTileSet
 from pytiled_parser.parsers.json.tileset import parse as parse_json_tileset
 from pytiled_parser.parsers.tmx.tileset import parse as parse_tmx_tileset
 from pytiled_parser.tiled_map import TiledMap, TilesetDict
-from pytiled_parser.util import check_format, parse_color
+from pytiled_parser.util import load_raw_resource, parse_color
 
 RawTilesetMapping = TypedDict("RawTilesetMapping", {"firstgid": int, "source": str})
 
@@ -76,29 +76,35 @@ def parse(file: Path, encoding: str) -> TiledMap:
         if raw_tileset.get("source") is not None:
             # Is an external Tileset
             tileset_path = Path(parent_dir / raw_tileset["source"])
-            parser = check_format(tileset_path, encoding)
-            with open(tileset_path, encoding=encoding) as raw_tileset_file:
-                if parser == "tmx":
-                    raw_tileset_external = etree.parse(raw_tileset_file).getroot()
-                    tilesets[raw_tileset["firstgid"]] = parse_tmx_tileset(
+            # The raw content is cached per parse_map call and shared
+            # read-only; firstgid and external_path are applied per reference.
+            try:
+                raw_tileset_external = load_raw_resource(tileset_path, encoding)
+            except ValueError:
+                raise UnknownFormat(
+                    "Unknown Tileset Format, please use either the TSX or JSON format. "
+                    "This message could also mean your tileset file is invalid or corrupted."
+                )
+            if isinstance(raw_tileset_external, etree.Element):
+                tilesets[raw_tileset["firstgid"]] = parse_tmx_tileset(
+                    raw_tileset_external,
+                    raw_tileset["firstgid"],
+                    encoding,
+                    external_path=tileset_path.parent,
+                )
+            else:
+                try:
+                    tilesets[raw_tileset["firstgid"]] = parse_json_tileset(
                         raw_tileset_external,
                         raw_tileset["firstgid"],
                         encoding,
                         external_path=tileset_path.parent,
                     )
-                else:
-                    try:
-                        tilesets[raw_tileset["firstgid"]] = parse_json_tileset(
-                            json.load(raw_tileset_file),
-                            raw_tileset["firstgid"],
-                            encoding,
-                            external_path=tileset_path.parent,
-                        )
-                    except ValueError:
-                        raise UnknownFormat(
-                            "Unknown Tileset Format, please use either the TSX or JSON format. "
-                            "This message could also mean your tileset file is invalid or corrupted."
-                        )
+                except ValueError:
+                    raise UnknownFormat(
+                        "Unknown Tileset Format, please use either the TSX or JSON format. "
+                        "This message could also mean your tileset file is invalid or corrupted."
+                    )
         else:
             # Is an embedded Tileset
             raw_tileset = cast(RawTileSet, raw_tileset)
