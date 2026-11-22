@@ -1,6 +1,8 @@
 import json
 import xml.etree.ElementTree as etree
+from contextlib import ExitStack
 from pathlib import Path
+from typing import Optional
 
 from pytiled_parser.common_types import OrderedPair, Size
 from pytiled_parser.exception import UnknownFormat
@@ -8,19 +10,30 @@ from pytiled_parser.parsers.json.tileset import parse as parse_json_tileset
 from pytiled_parser.parsers.tmx.layer import parse as parse_layer
 from pytiled_parser.parsers.tmx.properties import parse as parse_properties
 from pytiled_parser.parsers.tmx.tileset import parse as parse_tmx_tileset
+from pytiled_parser.sandbox import PathSandbox, resolve_reference
 from pytiled_parser.tiled_map import TiledMap, TilesetDict
 from pytiled_parser.util import check_format, parse_color
 
 
-def parse(file: Path) -> TiledMap:
+def parse(file: Path, sandbox: Optional[PathSandbox] = None) -> TiledMap:
     """Parse the raw Tiled map into a pytiled_parser type.
 
     Args:
         file: Path to the map file.
+        sandbox: Optional path sandbox applied to every recursive reference.
 
     Returns:
         TiledMap: A parsed TiledMap.
     """
+    if sandbox is not None:
+        with ExitStack() as stack:
+            stack.enter_context(sandbox.visiting(file))
+            return _parse(file, sandbox)
+
+    return _parse(file, None)
+
+
+def _parse(file: Path, sandbox: Optional[PathSandbox]) -> TiledMap:
     with open(file) as map_file:
         raw_map = etree.parse(map_file).getroot()
 
@@ -32,7 +45,12 @@ def parse(file: Path) -> TiledMap:
     for raw_tileset in raw_tilesets:
         if raw_tileset.attrib.get("source") is not None:
             # Is an external Tileset
-            tileset_path = Path(parent_dir / raw_tileset.attrib["source"])
+            tileset_path = resolve_reference(
+                sandbox,
+                parent_dir,
+                raw_tileset.attrib["source"],
+                context="tileset",
+            )
             parser = check_format(tileset_path)
             with open(tileset_path) as tileset_file:
                 if parser == "tmx":
@@ -41,12 +59,14 @@ def parse(file: Path) -> TiledMap:
                         raw_tileset_external,
                         int(raw_tileset.attrib["firstgid"]),
                         external_path=tileset_path.parent,
+                        sandbox=sandbox,
                     )
                 elif parser == "json":
                     tilesets[int(raw_tileset.attrib["firstgid"])] = parse_json_tileset(
                         json.load(tileset_file),
                         int(raw_tileset.attrib["firstgid"]),
                         external_path=tileset_path.parent,
+                        sandbox=sandbox,
                     )
                 else:
                     raise UnknownFormat(
@@ -54,15 +74,19 @@ def parse(file: Path) -> TiledMap:
                     )
 
         else:
-            # Is an embedded Tileset
+            # Is an embedded Tileset. Under a sandbox its image references are
+            # relative to the map's own directory.
             tilesets[int(raw_tileset.attrib["firstgid"])] = parse_tmx_tileset(
-                raw_tileset, int(raw_tileset.attrib["firstgid"])
+                raw_tileset,
+                int(raw_tileset.attrib["firstgid"]),
+                external_path=parent_dir if sandbox is not None else None,
+                sandbox=sandbox,
             )
 
     layers = []
     for element in raw_map.findall("./*"):
         if element.tag in ["layer", "objectgroup", "imagelayer", "group"]:
-            layers.append(parse_layer(element, parent_dir))
+            layers.append(parse_layer(element, parent_dir, sandbox=sandbox))
 
     map_ = TiledMap(
         map_file=file,
@@ -115,6 +139,7 @@ def parse(file: Path) -> TiledMap:
                             tiled_object.new_tileset,
                             new_firstgid,
                             tiled_object.new_tileset_path,
+                            sandbox=sandbox,
                         )
                         tiled_object.gid = tiled_object.gid + (new_firstgid - 1)
 

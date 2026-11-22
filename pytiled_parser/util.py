@@ -3,9 +3,10 @@
 import json
 import xml.etree.ElementTree as etree
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from pytiled_parser.common_types import Color
+from pytiled_parser.sandbox import PathSandbox, _null_context, resolve_reference
 
 
 def parse_color(color: str) -> Color:
@@ -46,7 +47,18 @@ def check_format(file_path: Path) -> str:
             return "json"
 
 
-def load_object_template(file_path: Path) -> Any:
+def load_object_template(file_path: Path, sandbox: Optional[PathSandbox] = None) -> Any:
+    if sandbox is not None:
+        file_path = sandbox.check_path(file_path, context="object template")
+        context_manager: Any = sandbox.visiting(file_path)
+    else:
+        context_manager = _null_context()
+
+    with context_manager:
+        return _load_object_template(file_path, sandbox)
+
+
+def _load_object_template(file_path: Path, sandbox: Optional[PathSandbox]) -> Any:
     template_format = check_format(file_path)
 
     new_tileset = None
@@ -58,29 +70,46 @@ def load_object_template(file_path: Path) -> Any:
 
             tileset_element = template.find("./tileset")
             if tileset_element is not None:
-                tileset_path = Path(file_path.parent / tileset_element.attrib["source"])
-                new_tileset = load_object_tileset(tileset_path)
+                tileset_path = resolve_reference(
+                    sandbox,
+                    file_path.parent,
+                    tileset_element.attrib["source"],
+                    context="template tileset",
+                )
+                new_tileset = load_object_tileset(tileset_path, sandbox=sandbox)
                 new_tileset_path = tileset_path.parent
     else:
         with open(file_path) as template_file:
             template = json.load(template_file)
             if "tileset" in template:
-                tileset_path = Path(file_path.parent / template["tileset"]["source"])  # type: ignore
-                new_tileset = load_object_tileset(tileset_path)
+                tileset_path = resolve_reference(  # type: ignore
+                    sandbox,
+                    file_path.parent,
+                    template["tileset"]["source"],
+                    context="template tileset",
+                )
+                new_tileset = load_object_tileset(tileset_path, sandbox=sandbox)
                 new_tileset_path = tileset_path.parent
 
     return (template, new_tileset, new_tileset_path)
 
 
-def load_object_tileset(file_path: Path) -> Any:
-    tileset_format = check_format(file_path)
+def load_object_tileset(file_path: Path, sandbox: Optional[PathSandbox] = None) -> Any:
+    if sandbox is not None:
+        file_path = sandbox.check_path(file_path, context="template tileset")
+        context_manager: Any = sandbox.visiting(file_path)
+    else:
+        context_manager = _null_context()
 
-    new_tileset = None
+    with context_manager:
+        tileset_format = check_format(file_path)
 
-    with open(file_path) as tileset_file:
-        if tileset_format == "tmx":
-            new_tileset = etree.parse(tileset_file).getroot()
-        else:
-            new_tileset = json.load(tileset_file)
+        new_tileset = None
 
-    return new_tileset
+        with open(file_path) as tileset_file:
+            if tileset_format == "tmx":
+                new_tileset = etree.parse(tileset_file).getroot()
+            else:
+                new_tileset = json.load(tileset_file)
+
+        return new_tileset

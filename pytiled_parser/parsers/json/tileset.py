@@ -10,8 +10,36 @@ from pytiled_parser.parsers.json.properties import RawProperty
 from pytiled_parser.parsers.json.properties import parse as parse_properties
 from pytiled_parser.parsers.json.wang_set import RawWangSet
 from pytiled_parser.parsers.json.wang_set import parse as parse_wangset
+from pytiled_parser.sandbox import PathSandbox, resolve_reference
 from pytiled_parser.tileset import Frame, Grid, Tile, Tileset, Transformations
 from pytiled_parser.util import parse_color
+
+
+def _resolve_image(
+    reference: str,
+    external_path: Optional[Path],
+    sandbox: Optional[PathSandbox],
+) -> Path:
+    """Resolve an image reference, preserving legacy behavior without a sandbox.
+
+    Embedded tilesets (no ``external_path``) keep a plain relative
+    :class:`Path`; external tilesets are resolved against their own directory.
+    Under a sandbox every image is validated against the allowed roots.
+    """
+    if sandbox is not None:
+        if external_path is None:
+            raise RuntimeError(
+                "An external path is required when parsing an image reference "
+                "with an active sandbox."
+            )
+        return resolve_reference(
+            sandbox, external_path, reference, context="tileset image"
+        )
+
+    if external_path:
+        return Path(external_path / reference).absolute().resolve()
+    return Path(reference)
+
 
 RawFrame = TypedDict("RawFrame", {"duration": int, "tileid": int})
 RawFrame.__doc__ = """
@@ -161,7 +189,11 @@ def _parse_grid(raw_grid: RawGrid) -> Grid:
     )
 
 
-def _parse_tile(raw_tile: RawTile, external_path: Optional[Path] = None) -> Tile:
+def _parse_tile(
+    raw_tile: RawTile,
+    external_path: Optional[Path] = None,
+    sandbox: Optional[PathSandbox] = None,
+) -> Tile:
     """Parse the raw_tile to a Tile object.
 
     Args:
@@ -186,10 +218,7 @@ def _parse_tile(raw_tile: RawTile, external_path: Optional[Path] = None) -> Tile
         tile.properties = parse_properties(raw_tile["properties"])
 
     if raw_tile.get("image") is not None:
-        if external_path:
-            tile.image = Path(external_path / raw_tile["image"]).absolute().resolve()
-        else:
-            tile.image = Path(raw_tile["image"])
+        tile.image = _resolve_image(raw_tile["image"], external_path, sandbox)
 
     # These are ignored from coverage because there does not exist a scenario where
     # image is set, but these aren't, so the branches will never fully be hit.
@@ -232,6 +261,7 @@ def parse(
     raw_tileset: RawTileSet,
     firstgid: int,
     external_path: Optional[Path] = None,
+    sandbox: Optional[PathSandbox] = None,
 ) -> Tileset:
     """Parse the raw tileset into a pytiled_parser type
 
@@ -239,6 +269,7 @@ def parse(
         raw_tileset: Raw Tileset to be parsed.
         firstgid: GID corresponding the first tile in the set.
         external_path: The path to the tileset if it is not an embedded one.
+        sandbox: Optional path sandbox applied to image references.
 
     Returns:
         TileSet: a properly typed TileSet.
@@ -269,12 +300,7 @@ def parse(
         tileset.tiled_version = raw_tileset["tiledversion"]
 
     if raw_tileset.get("image") is not None:
-        if external_path:
-            tileset.image = (
-                Path(external_path / raw_tileset["image"]).absolute().resolve()
-            )
-        else:
-            tileset.image = Path(raw_tileset["image"])
+        tileset.image = _resolve_image(raw_tileset["image"], external_path, sandbox)
 
     # See above note about imagewidth and imageheight on parse_tile function
     # for an explanation on why these are ignored
@@ -309,12 +335,12 @@ def parse(
                 assert raw_tile.get("id") is None
                 raw_tile["id"] = int(raw_tile_id)
                 tiles[raw_tile["id"]] = _parse_tile(
-                    raw_tile, external_path=external_path
+                    raw_tile, external_path=external_path, sandbox=sandbox
                 )
         else:
             for raw_tile in raw_tileset["tiles"]:
                 tiles[raw_tile["id"]] = _parse_tile(
-                    raw_tile, external_path=external_path
+                    raw_tile, external_path=external_path, sandbox=sandbox
                 )
         tileset.tiles = tiles
 

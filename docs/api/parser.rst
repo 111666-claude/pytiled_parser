@@ -11,6 +11,11 @@ pytiled_parser.parse_map
 
 .. autofunction:: pytiled_parser.parse_map
 
+pytiled_parser.parse_tileset
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: pytiled_parser.parse_tileset
+
 pytiled_parser.parse_world
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 

@@ -14,12 +14,13 @@ import re
 from os import listdir
 from os.path import isfile, join
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import attr
 from typing_extensions import TypedDict
 
 from pytiled_parser.common_types import OrderedPair, Size
+from pytiled_parser.sandbox import PathSandbox, resolve_reference
 
 
 @attr.s(auto_attribs=True)
@@ -100,15 +101,22 @@ def _parse_world_map(raw_world_map: RawWorldMap, map_file: Path) -> WorldMap:
     )
 
 
-def parse_world(file: Path) -> World:
+def parse_world(file: Path, sandbox: "Optional[PathSandbox]" = None) -> World:
     """Parse the raw world into a pytiled_parser type
 
     Args:
         file: Path to the world's file
+        sandbox: Optional path sandbox. When provided, the world file and
+            every map path it records are checked against the sandbox. Maps
+            are not parsed here, but their stored paths are guaranteed to
+            resolve within the sandbox.
 
     Returns:
         World: A properly parsed [World][pytiled_parser.world.World]
     """
+
+    if sandbox is not None:
+        file = sandbox.check_path(file, context="world file")
 
     with open(file) as world_file:
         raw_world = json.load(world_file)
@@ -119,7 +127,9 @@ def parse_world(file: Path) -> World:
 
     if raw_world.get("maps"):
         for raw_map in raw_world["maps"]:
-            map_path = Path(parent_dir / raw_map["fileName"])
+            map_path = resolve_reference(
+                sandbox, parent_dir, raw_map["fileName"], context="world map"
+            )
             maps.append(_parse_world_map(raw_map, map_path))
 
     if raw_world.get("patterns"):
@@ -156,7 +166,9 @@ def parse_world(file: Path) -> World:
                         "y": y,
                     }
 
-                    map_path = Path(parent_dir / map_file)
+                    map_path = resolve_reference(
+                        sandbox, parent_dir, map_file, context="world map"
+                    )
                     maps.append(_parse_world_map(raw_world_map, map_path))
 
     world = World(maps=maps)

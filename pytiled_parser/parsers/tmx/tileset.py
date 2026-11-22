@@ -6,8 +6,30 @@ from pytiled_parser.common_types import OrderedPair
 from pytiled_parser.parsers.tmx.layer import parse as parse_layer
 from pytiled_parser.parsers.tmx.properties import parse as parse_properties
 from pytiled_parser.parsers.tmx.wang_set import parse as parse_wangset
+from pytiled_parser.sandbox import PathSandbox, resolve_reference
 from pytiled_parser.tileset import Frame, Grid, Tile, Tileset, Transformations
 from pytiled_parser.util import parse_color
+
+
+def _resolve_image(
+    reference: str,
+    external_path: Optional[Path],
+    sandbox: Optional[PathSandbox],
+) -> Path:
+    """Resolve an image reference, preserving legacy behavior without a sandbox."""
+    if sandbox is not None:
+        if external_path is None:
+            raise RuntimeError(
+                "An external path is required when parsing an image reference "
+                "with an active sandbox."
+            )
+        return resolve_reference(
+            sandbox, external_path, reference, context="tileset image"
+        )
+
+    if external_path:
+        return Path(external_path / reference).absolute().resolve()
+    return Path(reference)
 
 
 def _parse_frame(raw_frame: etree.Element) -> Frame:
@@ -63,7 +85,11 @@ def _parse_transformations(raw_transformations: etree.Element) -> Transformation
     )
 
 
-def _parse_tile(raw_tile: etree.Element, external_path: Optional[Path] = None) -> Tile:
+def _parse_tile(
+    raw_tile: etree.Element,
+    external_path: Optional[Path] = None,
+    sandbox: Optional[PathSandbox] = None,
+) -> Tile:
     """Parse the raw_tile to a Tile object.
 
     Args:
@@ -97,14 +123,9 @@ def _parse_tile(raw_tile: etree.Element, external_path: Optional[Path] = None) -
 
     image_element = raw_tile.find("./image")
     if image_element is not None:
-        if external_path:
-            tile.image = (
-                Path(external_path / image_element.attrib["source"])
-                .absolute()
-                .resolve()
-            )
-        else:
-            tile.image = Path(image_element.attrib["source"])
+        tile.image = _resolve_image(
+            image_element.attrib["source"], external_path, sandbox
+        )
 
         tile.image_width = int(image_element.attrib["width"])
         tile.width = tile.image_width
@@ -130,6 +151,7 @@ def parse(
     raw_tileset: etree.Element,
     firstgid: int,
     external_path: Optional[Path] = None,
+    sandbox: Optional[PathSandbox] = None,
 ) -> Tileset:
     tileset = Tileset(
         name=raw_tileset.attrib["name"],
@@ -169,14 +191,9 @@ def parse(
 
     image_element = raw_tileset.find("image")
     if image_element is not None:
-        if external_path:
-            tileset.image = (
-                Path(external_path / image_element.attrib["source"])
-                .absolute()
-                .resolve()
-            )
-        else:
-            tileset.image = Path(image_element.attrib["source"])
+        tileset.image = _resolve_image(
+            image_element.attrib["source"], external_path, sandbox
+        )
 
         tileset.image_width = int(image_element.attrib["width"])
         tileset.image_height = int(image_element.attrib["height"])
@@ -204,7 +221,7 @@ def parse(
     tiles = {}
     for tile_element in raw_tileset.findall("./tile"):
         tiles[int(tile_element.attrib["id"])] = _parse_tile(
-            tile_element, external_path=external_path
+            tile_element, external_path=external_path, sandbox=sandbox
         )
     if tiles:
         tileset.tiles = tiles

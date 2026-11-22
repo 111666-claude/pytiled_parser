@@ -23,6 +23,7 @@ from pytiled_parser.parsers.json.properties import RawProperty
 from pytiled_parser.parsers.json.properties import parse as parse_properties
 from pytiled_parser.parsers.json.tiled_object import RawObject
 from pytiled_parser.parsers.json.tiled_object import parse as parse_object
+from pytiled_parser.sandbox import PathSandbox, resolve_reference
 from pytiled_parser.util import parse_color
 
 # This optional zstd include is basically impossible to make a sensible test
@@ -299,6 +300,7 @@ def _parse_tile_layer(raw_layer: RawLayer) -> TileLayer:
 def _parse_object_layer(
     raw_layer: RawLayer,
     parent_dir: Optional[Path] = None,
+    sandbox: Optional[PathSandbox] = None,
 ) -> ObjectLayer:
     """Parse the raw_layer to an ObjectLayer.
 
@@ -310,7 +312,7 @@ def _parse_object_layer(
     """
     objects = []
     for object_ in raw_layer["objects"]:
-        objects.append(parse_object(object_, parent_dir))
+        objects.append(parse_object(object_, parent_dir, sandbox=sandbox))
 
     return ObjectLayer(
         tiled_objects=objects,
@@ -319,7 +321,11 @@ def _parse_object_layer(
     )
 
 
-def _parse_image_layer(raw_layer: RawLayer) -> ImageLayer:
+def _parse_image_layer(
+    raw_layer: RawLayer,
+    parent_dir: Optional[Path] = None,
+    sandbox: Optional[PathSandbox] = None,
+) -> ImageLayer:
     """Parse the raw_layer to an ImageLayer.
 
     Args:
@@ -328,9 +334,19 @@ def _parse_image_layer(raw_layer: RawLayer) -> ImageLayer:
     Returns:
         ImageLayer: The ImageLayer created from raw_layer
     """
-    image_layer = ImageLayer(
-        image=Path(raw_layer["image"]), **_parse_common(raw_layer).__dict__
-    )
+    if sandbox is not None:
+        if parent_dir is None:
+            raise RuntimeError(
+                "A parent directory must be specified when parsing an image "
+                "layer with an active sandbox."
+            )
+        image_path = resolve_reference(
+            sandbox, parent_dir, raw_layer["image"], context="image layer"
+        )
+    else:
+        image_path = Path(raw_layer["image"])
+
+    image_layer = ImageLayer(image=image_path, **_parse_common(raw_layer).__dict__)
 
     if raw_layer.get("transparentcolor") is not None:
         image_layer.transparent_color = parse_color(raw_layer["transparentcolor"])
@@ -339,7 +355,9 @@ def _parse_image_layer(raw_layer: RawLayer) -> ImageLayer:
 
 
 def _parse_group_layer(
-    raw_layer: RawLayer, parent_dir: Optional[Path] = None
+    raw_layer: RawLayer,
+    parent_dir: Optional[Path] = None,
+    sandbox: Optional[PathSandbox] = None,
 ) -> LayerGroup:
     """Parse the raw_layer to a LayerGroup.
 
@@ -352,7 +370,7 @@ def _parse_group_layer(
     layers = []
 
     for layer in raw_layer["layers"]:
-        layers.append(parse(layer, parent_dir=parent_dir))
+        layers.append(parse(layer, parent_dir=parent_dir, sandbox=sandbox))
 
     return LayerGroup(layers=layers, **_parse_common(raw_layer).__dict__)
 
@@ -360,6 +378,7 @@ def _parse_group_layer(
 def parse(
     raw_layer: RawLayer,
     parent_dir: Optional[Path] = None,
+    sandbox: Optional[PathSandbox] = None,
 ) -> Layer:
     """Parse a raw Layer into a pytiled_parser object.
 
@@ -368,6 +387,7 @@ def parse(
     Args:
         raw_layer: Raw layer to be parsed.
         parent_dir: The parent directory that the map file is in.
+        sandbox: Optional path sandbox applied to recursive references.
 
     Returns:
         Layer: A parsed Layer.
@@ -378,11 +398,11 @@ def parse(
     type_ = raw_layer["type"]
 
     if type_ == "objectgroup":
-        return _parse_object_layer(raw_layer, parent_dir)
+        return _parse_object_layer(raw_layer, parent_dir, sandbox)
     elif type_ == "group":
-        return _parse_group_layer(raw_layer, parent_dir)
+        return _parse_group_layer(raw_layer, parent_dir, sandbox)
     elif type_ == "imagelayer":
-        return _parse_image_layer(raw_layer)
+        return _parse_image_layer(raw_layer, parent_dir, sandbox)
     elif type_ == "tilelayer":
         return _parse_tile_layer(raw_layer)
 

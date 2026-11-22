@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [Unreleased]
+
+### Added
+
+- Optional reference path sandbox for parsing untrusted level packs. Pass a
+  `pytiled_parser.PathSandbox` to `parse_map`, `parse_tileset` or
+  `parse_world` and every recursive reference (external tilesets, object
+  templates and their tilesets, tileset/per-tile images, image layers and
+  world members) is resolved to its real path and checked against one or more
+  allowed root directories before it is opened.
+- Distinct, context-aware exceptions for each failure mode:
+  `SandboxAbsolutePath`, `SandboxPathOutsideRoot` (covers `../` traversal and
+  symlink escapes), `SandboxPathNotFound` and `SandboxCycle`, all inheriting
+  from a common `SandboxError`. Absolute-path detection handles POSIX,
+  Windows drive-letter and UNC forms, and mixed `/` / `\` separators are
+  normalized, on any platform.
+- The sandbox is opt-in: when none is supplied all parsing behavior is
+  unchanged, including legitimate same-directory, sub-directory and in-pack
+  `../` references.
+
 ## [2.2.5] - 2024-07-01
 
 Adds a `__all__` section to the main library `__init__.py` file which fixes problems when running pyright in strict mode against this library, it would not be able to see the exported types.

@@ -16,3 +16,4 @@ This comes at the cost of making a guide like this not as straight forward as it
     :maxdepth: 1
 
     map_loading
+    sandbox

@@ -9,6 +9,7 @@ from typing_extensions import TypedDict
 from pytiled_parser.common_types import OrderedPair, Size
 from pytiled_parser.parsers.json.properties import RawProperty
 from pytiled_parser.parsers.json.properties import parse as parse_properties
+from pytiled_parser.sandbox import PathSandbox, resolve_reference
 from pytiled_parser.tiled_object import (
     Ellipse,
     Point,
@@ -292,12 +293,14 @@ def _get_parser(raw_object: RawObject) -> Callable[[RawObject], TiledObject]:
 def parse(
     raw_object: RawObject,
     parent_dir: Optional[Path] = None,
+    sandbox: Optional[PathSandbox] = None,
 ) -> TiledObject:
     """Parse the raw object into a pytiled_parser version
 
     Args:
         raw_object: Raw object that is to be cast.
         parent_dir: The parent directory that the map file is in.
+        sandbox: Optional path sandbox applied to template references.
 
     Returns:
         Object: A parsed Object.
@@ -313,8 +316,15 @@ def parse(
             raise RuntimeError(
                 "A parent directory must be specified when using object templates."
             )
-        template_path = Path(parent_dir / raw_object["template"])
-        template, new_tileset, new_tileset_path = load_object_template(template_path)
+        template_path = resolve_reference(
+            sandbox,
+            parent_dir,
+            raw_object["template"],
+            context="object template",
+        )
+        template, new_tileset, new_tileset_path = load_object_template(
+            template_path, sandbox=sandbox
+        )
 
         if isinstance(template, dict):
             loaded_template = template["object"]

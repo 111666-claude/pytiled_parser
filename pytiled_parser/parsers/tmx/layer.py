@@ -20,6 +20,7 @@ from pytiled_parser.layer import (
 )
 from pytiled_parser.parsers.tmx.properties import parse as parse_properties
 from pytiled_parser.parsers.tmx.tiled_object import parse as parse_object
+from pytiled_parser.sandbox import PathSandbox, resolve_reference
 from pytiled_parser.util import parse_color
 
 # This optional zstd include is basically impossible to make a sensible test
@@ -262,7 +263,9 @@ def _parse_tile_layer(raw_layer: etree.Element) -> TileLayer:
 
 
 def _parse_object_layer(
-    raw_layer: etree.Element, parent_dir: Optional[Path] = None
+    raw_layer: etree.Element,
+    parent_dir: Optional[Path] = None,
+    sandbox: Optional[PathSandbox] = None,
 ) -> ObjectLayer:
     """Parse the raw_layer to an ObjectLayer.
 
@@ -274,7 +277,7 @@ def _parse_object_layer(
     """
     objects = []
     for object_ in raw_layer.findall("./object"):
-        objects.append(parse_object(object_, parent_dir))
+        objects.append(parse_object(object_, parent_dir, sandbox=sandbox))
 
     object_layer = ObjectLayer(
         tiled_objects=objects,
@@ -287,7 +290,11 @@ def _parse_object_layer(
     return object_layer
 
 
-def _parse_image_layer(raw_layer: etree.Element) -> ImageLayer:
+def _parse_image_layer(
+    raw_layer: etree.Element,
+    parent_dir: Optional[Path] = None,
+    sandbox: Optional[PathSandbox] = None,
+) -> ImageLayer:
     """Parse the raw_layer to an ImageLayer.
 
     Args:
@@ -298,7 +305,20 @@ def _parse_image_layer(raw_layer: etree.Element) -> ImageLayer:
     """
     image_element = raw_layer.find("./image")
     if image_element is not None:
-        source = Path(image_element.attrib["source"])
+        if sandbox is not None:
+            if parent_dir is None:
+                raise RuntimeError(
+                    "A parent directory must be specified when parsing an image "
+                    "layer with an active sandbox."
+                )
+            source = resolve_reference(
+                sandbox,
+                parent_dir,
+                image_element.attrib["source"],
+                context="image layer",
+            )
+        else:
+            source = Path(image_element.attrib["source"])
 
         transparent_color = None
         if image_element.attrib.get("trans") is not None:
@@ -316,7 +336,9 @@ def _parse_image_layer(raw_layer: etree.Element) -> ImageLayer:
 
 
 def _parse_group_layer(
-    raw_layer: etree.Element, parent_dir: Optional[Path] = None
+    raw_layer: etree.Element,
+    parent_dir: Optional[Path] = None,
+    sandbox: Optional[PathSandbox] = None,
 ) -> LayerGroup:
     """Parse the raw_layer to a LayerGroup.
 
@@ -331,13 +353,13 @@ def _parse_group_layer(
         layers.append(_parse_tile_layer(layer))
 
     for layer in raw_layer.findall("./objectgroup"):
-        layers.append(_parse_object_layer(layer, parent_dir))
+        layers.append(_parse_object_layer(layer, parent_dir, sandbox))
 
     for layer in raw_layer.findall("./imagelayer"):
-        layers.append(_parse_image_layer(layer))
+        layers.append(_parse_image_layer(layer, parent_dir, sandbox))
 
     for layer in raw_layer.findall("./group"):
-        layers.append(_parse_group_layer(layer, parent_dir))
+        layers.append(_parse_group_layer(layer, parent_dir, sandbox))
     # layers = []
     # layers = [
     #    parse(child_layer, parent_dir=parent_dir)
@@ -351,6 +373,7 @@ def _parse_group_layer(
 def parse(
     raw_layer: etree.Element,
     parent_dir: Optional[Path] = None,
+    sandbox: Optional[PathSandbox] = None,
 ) -> Layer:
     """Parse a raw Layer into a pytiled_parser object.
 
@@ -359,6 +382,7 @@ def parse(
     Args:
         raw_layer: Raw layer to be parsed.
         parent_dir: The parent directory that the map file is in.
+        sandbox: Optional path sandbox applied to recursive references.
 
     Returns:
         Layer: A parsed Layer.
@@ -369,11 +393,11 @@ def parse(
     type_ = raw_layer.tag
 
     if type_ == "objectgroup":
-        return _parse_object_layer(raw_layer, parent_dir)
+        return _parse_object_layer(raw_layer, parent_dir, sandbox)
     elif type_ == "group":
-        return _parse_group_layer(raw_layer, parent_dir)
+        return _parse_group_layer(raw_layer, parent_dir, sandbox)
     elif type_ == "imagelayer":
-        return _parse_image_layer(raw_layer)
+        return _parse_image_layer(raw_layer, parent_dir, sandbox)
     elif type_ == "layer":
         return _parse_tile_layer(raw_layer)
     else:

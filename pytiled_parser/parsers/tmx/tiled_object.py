@@ -4,6 +4,7 @@ from typing import Callable, Optional
 
 from pytiled_parser.common_types import OrderedPair, Size
 from pytiled_parser.parsers.tmx.properties import parse as parse_properties
+from pytiled_parser.sandbox import PathSandbox, resolve_reference
 from pytiled_parser.tiled_object import (
     Ellipse,
     Point,
@@ -245,12 +246,17 @@ def _get_parser(raw_object: etree.Element) -> Callable[[etree.Element], TiledObj
     return _parse_rectangle
 
 
-def parse(raw_object: etree.Element, parent_dir: Optional[Path] = None) -> TiledObject:
+def parse(
+    raw_object: etree.Element,
+    parent_dir: Optional[Path] = None,
+    sandbox: Optional[PathSandbox] = None,
+) -> TiledObject:
     """Parse the raw object into a pytiled_parser version
 
     Args:
         raw_object: XML Element that is to be parsed.
         parent_dir: The parent directory that the map file is in.
+        sandbox: Optional path sandbox applied to template references.
 
     Returns:
         TiledObject: A parsed Object.
@@ -266,8 +272,15 @@ def parse(raw_object: etree.Element, parent_dir: Optional[Path] = None) -> Tiled
             raise RuntimeError(
                 "A parent directory must be specified when using object templates."
             )
-        template_path = Path(parent_dir / raw_object.attrib["template"])
-        template, new_tileset, new_tileset_path = load_object_template(template_path)
+        template_path = resolve_reference(
+            sandbox,
+            parent_dir,
+            raw_object.attrib["template"],
+            context="object template",
+        )
+        template, new_tileset, new_tileset_path = load_object_template(
+            template_path, sandbox=sandbox
+        )
 
         if isinstance(template, etree.Element):
             new_object = template.find("./object")
