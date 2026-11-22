@@ -1,0 +1,15 @@
+{"layers":[
+  {"type":"objectgroup","name":"objs","id":2,"draworder":"topdown","opacity":1,"visible":true,
+   "objects":[{"id":1,"template":"cycle_a.json","x":10,"y":20}]}
+ ],
+ "nextlayerid":3,
+ "nextobjectid":2,
+ "orientation":"orthogonal",
+ "renderorder":"right-down",
+ "tiledversion":"1.9.2",
+ "tileheight":32,
+ "tilesets":[],
+ "tilewidth":32,
+ "version":"1.9",
+ "width":8,
+ "height":6}

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.9" tiledversion="1.9.2" orientation="orthogonal" renderorder="right-down" width="8" height="6" tilewidth="32" tileheight="32" infinite="0" nextlayerid="3" nextobjectid="2">
+ <objectgroup id="2" name="Object Layer 1">
+  <object id="1" name="crate" x="10" y="10" width="10" height="10">
+   <properties>
+    <property name="hp" type="int" value="many"/>
+   </properties>
+  </object>
+ </objectgroup>
+</map>

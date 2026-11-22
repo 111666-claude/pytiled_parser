@@ -1,0 +1,15 @@
+{ "height":6,
+ "infinite":false,
+ "layers":[
+  {"type":"faketype","name":"Weird Layer","id":1,"opacity":1,"visible":true}
+ ],
+ "nextlayerid":3,
+ "nextobjectid":1,
+ "orientation":"orthogonal",
+ "renderorder":"right-down",
+ "tiledversion":"1.9.2",
+ "tileheight":32,
+ "tilesets":[],
+ "tilewidth":32,
+ "version":"1.9",
+ "width":8}

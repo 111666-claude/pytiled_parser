@@ -1,5 +1,4 @@
-"""Layer parsing for the JSON Map Format.
-"""
+"""Layer parsing for the JSON Map Format."""
 
 import base64
 import gzip
@@ -10,7 +9,16 @@ from typing import Any, List, Optional, Union, cast
 
 from typing_extensions import TypedDict
 
+from pytiled_parser import diagnostics
 from pytiled_parser.common_types import OrderedPair, Size
+from pytiled_parser.diagnostics import JsonPath
+from pytiled_parser.exception import (
+    FieldTypeError,
+    InvalidFieldValueError,
+    MissingFieldError,
+    UnknownLayerTypeError,
+    UnsupportedCompressionError,
+)
 from pytiled_parser.layer import (
     Chunk,
     ImageLayer,
@@ -105,6 +113,16 @@ def _convert_raw_tile_layer_data(data: List[int], layer_width: int) -> List[List
     """
     tile_grid: List[List[int]] = [[]]
 
+    if layer_width <= 0:
+        raise diagnostics.json_error(
+            InvalidFieldValueError,
+            "Layer width must be greater than zero, got {}".format(layer_width),
+            path=("width",),
+            reason="tile data cannot be split into rows of width {}".format(
+                layer_width
+            ),
+        )
+
     column_count = 0
     row_count = 0
     for item in data:
@@ -130,23 +148,68 @@ def _decode_tile_layer_data(
         List[List[int]]: A nested list containing the decoded data
 
     Raises:
-        ValueError: For an unsupported compression type.
+        UnsupportedCompressionError: For an unsupported compression type.
     """
-    unencoded_data = base64.b64decode(data)
+    try:
+        compact = "".join(data.split())
+        unencoded_data = base64.b64decode(compact, validate=True)
+    except (ValueError, TypeError) as error:
+        raise diagnostics.json_error(
+            InvalidFieldValueError,
+            "Tile data is not valid base64",
+            path=("data",),
+            reason=str(error),
+        ) from error
+
     if compression == "zlib":
-        unzipped_data = zlib.decompress(unencoded_data)
+        try:
+            unzipped_data = zlib.decompress(unencoded_data)
+        except zlib.error as error:
+            raise diagnostics.json_error(
+                InvalidFieldValueError,
+                "Could not decompress zlib tile data",
+                path=("data",),
+                reason=str(error),
+            ) from error
     elif compression == "gzip":
-        unzipped_data = gzip.decompress(unencoded_data)
+        try:
+            unzipped_data = gzip.decompress(unencoded_data)
+        except (OSError, EOFError) as error:
+            raise diagnostics.json_error(
+                InvalidFieldValueError,
+                "Could not decompress gzip tile data",
+                path=("data",),
+                reason=str(error),
+            ) from error
     elif compression == "zstd" and zstd is None:
-        raise ValueError(
+        raise diagnostics.json_error(
+            UnsupportedCompressionError,
             "zstd compression support is not installed."
-            "To install use 'pip install pytiled-parser[zstd]'"
+            "To install use 'pip install pytiled-parser[zstd]'",
+            path=("compression",),
+            reason="zstd support is not installed",
         )
     # See above note at top of module about zstd tests
     elif compression == "zstd":  # pragma: no cover
-        unzipped_data = zstd.decompress(unencoded_data)
-    else:
+        try:
+            unzipped_data = zstd.decompress(unencoded_data)
+        except Exception as error:
+            raise diagnostics.json_error(
+                InvalidFieldValueError,
+                "Could not decompress zstd tile data",
+                path=("data",),
+                reason=str(error),
+            ) from error
+    elif compression in ("", None):
         unzipped_data = unencoded_data
+    else:
+        raise diagnostics.json_error(
+            UnsupportedCompressionError,
+            "Unsupported compression {!r}, expected 'zlib', 'gzip', 'zstd' "
+            "or none".format(compression),
+            path=("compression",),
+            reason="unsupported compression method",
+        )
 
     tile_grid: List[int] = []
 
@@ -165,10 +228,19 @@ def _decode_tile_layer_data(
     return _convert_raw_tile_layer_data(tile_grid, layer_width)
 
 
+def _require_layer_width(raw_layer: RawLayer, path: JsonPath) -> int:
+    return cast(
+        int,
+        diagnostics.json_require(raw_layer, "width", int, path=path),
+    )
+
+
 def _parse_chunk(
     raw_chunk: RawChunk,
     encoding: Optional[str] = None,
     compression: Optional[str] = None,
+    *,
+    path: JsonPath = (),
 ) -> Chunk:
     """Parse the raw_chunk to a Chunk.
 
@@ -180,20 +252,45 @@ def _parse_chunk(
     Returns:
         Chunk: The Chunk created from the raw_chunk
     """
-    if encoding == "base64":
-        assert isinstance(compression, str)
-        assert isinstance(raw_chunk["data"], str)
-        data = _decode_tile_layer_data(
-            raw_chunk["data"], compression, raw_chunk["width"]
-        )
-    else:
-        data = _convert_raw_tile_layer_data(
-            raw_chunk["data"], raw_chunk["width"]  # type: ignore
+    if not isinstance(raw_chunk, dict):
+        raise diagnostics.json_error(
+            FieldTypeError,
+            "Expected an object for chunk, got {}".format(type(raw_chunk).__name__),
+            path=path,
+            reason="chunks are JSON objects",
         )
 
+    chunk_path = path
+    width = cast(
+        int, diagnostics.json_require(raw_chunk, "width", int, path=chunk_path)
+    )
+    height = cast(
+        int, diagnostics.json_require(raw_chunk, "height", int, path=chunk_path)
+    )
+    x = cast(int, diagnostics.json_require(raw_chunk, "x", int, path=chunk_path))
+    y = cast(int, diagnostics.json_require(raw_chunk, "y", int, path=chunk_path))
+
+    if encoding == "base64":
+        data_ = diagnostics.json_require(raw_chunk, "data", str, path=chunk_path)
+        assert isinstance(compression, str)
+        data = _decode_tile_layer_data(data_, compression, width)
+    else:
+        raw_data = diagnostics.json_require(raw_chunk, "data", list, path=chunk_path)
+        for index, item in enumerate(cast(List[Any], raw_data)):
+            if isinstance(item, bool) or not isinstance(item, int):
+                raise diagnostics.json_error(
+                    FieldTypeError,
+                    "Expected integers in chunk data, got {} at index {}".format(
+                        type(item).__name__, index
+                    ),
+                    path=chunk_path + ("data", index),
+                    reason="tile ids must be integers",
+                )
+        data = _convert_raw_tile_layer_data(cast(List[int], raw_data), width)
+
     chunk = Chunk(
-        coordinates=OrderedPair(raw_chunk["x"], raw_chunk["y"]),
-        size=Size(raw_chunk["width"], raw_chunk["height"]),
+        coordinates=OrderedPair(x, y),
+        size=Size(width, height),
         data=data,
     )
 
@@ -212,50 +309,84 @@ def _parse_common(raw_layer: RawLayer) -> Layer:
     Returns:
         Layer: The attributes in common of all layer types
     """
+    name = cast(str, diagnostics.json_require(raw_layer, "name", str))
+    opacity = cast(float, diagnostics.json_require(raw_layer, "opacity", float))
+    visible = cast(bool, diagnostics.json_require(raw_layer, "visible", bool))
+
     common = Layer(
-        name=raw_layer["name"],
-        opacity=raw_layer["opacity"],
-        visible=raw_layer["visible"],
+        name=name,
+        opacity=opacity,
+        visible=visible,
     )
 
     # if startx is present, starty is present
     if raw_layer.get("startx") is not None:
-        common.coordinates = OrderedPair(raw_layer["startx"], raw_layer["starty"])
+        startx = cast(int, diagnostics.json_optional(raw_layer, "startx", int))
+        starty = cast(int, diagnostics.json_require(raw_layer, "starty", int))
+        common.coordinates = OrderedPair(startx, starty)
+    elif raw_layer.get("starty") is not None:  # pragma: no cover - defensive
+        diagnostics.json_require(raw_layer, "starty", int)
 
     if raw_layer.get("id") is not None:
-        common.id = raw_layer["id"]
+        common.id = cast(int, diagnostics.json_optional(raw_layer, "id", int))
 
     # if either width or height is present, they both are
     if raw_layer.get("width") is not None:
-        common.size = Size(raw_layer["width"], raw_layer["height"])
+        width = cast(int, diagnostics.json_optional(raw_layer, "width", int))
+        height = cast(int, diagnostics.json_require(raw_layer, "height", int))
+        common.size = Size(width, height)
+    elif raw_layer.get("height") is not None:  # pragma: no cover - defensive
+        diagnostics.json_require(raw_layer, "height", int)
 
     if raw_layer.get("offsetx") is not None:
-        common.offset = OrderedPair(raw_layer["offsetx"], raw_layer["offsety"])
+        offsetx = cast(float, diagnostics.json_optional(raw_layer, "offsetx", float))
+        offsety = cast(float, diagnostics.json_require(raw_layer, "offsety", float))
+        common.offset = OrderedPair(offsetx, offsety)
 
     if raw_layer.get("properties") is not None:
-        common.properties = parse_properties(raw_layer["properties"])
+        common.properties = parse_properties(
+            raw_layer["properties"],
+            path=("properties",),
+        )
 
     if raw_layer.get("class") is not None:
-        common.class_ = raw_layer["class"]
+        common.class_ = cast(str, diagnostics.json_optional(raw_layer, "class", str))
 
     parallax = [1.0, 1.0]
 
     if raw_layer.get("parallaxx") is not None:
-        parallax[0] = raw_layer["parallaxx"]
+        parallax[0] = cast(
+            float, diagnostics.json_optional(raw_layer, "parallaxx", float)
+        )
 
     if raw_layer.get("parallaxy") is not None:
-        parallax[1] = raw_layer["parallaxy"]
+        parallax[1] = cast(
+            float, diagnostics.json_optional(raw_layer, "parallaxy", float)
+        )
 
     common.parallax_factor = OrderedPair(parallax[0], parallax[1])
 
     if raw_layer.get("tintcolor") is not None:
-        common.tint_color = parse_color(raw_layer["tintcolor"])
+        tint = cast(str, diagnostics.json_optional(raw_layer, "tintcolor", str))
+        try:
+            common.tint_color = parse_color(tint)
+        except InvalidFieldValueError as error:
+            raise diagnostics.json_error(
+                InvalidFieldValueError,
+                "Invalid tint color {!r}".format(tint),
+                path=("tintcolor",),
+                reason=error.reason or str(error),
+            ) from error
 
     if raw_layer.get("repeatx") is not None:
-        common.repeat_x = raw_layer["repeatx"]
+        common.repeat_x = cast(
+            bool, diagnostics.json_optional(raw_layer, "repeatx", bool)
+        )
 
     if raw_layer.get("repeaty") is not None:
-        common.repeat_y = raw_layer["repeaty"]
+        common.repeat_y = cast(
+            bool, diagnostics.json_optional(raw_layer, "repeaty", bool)
+        )
 
     return common
 
@@ -272,25 +403,91 @@ def _parse_tile_layer(raw_layer: RawLayer) -> TileLayer:
     tile_layer = TileLayer(**_parse_common(raw_layer).__dict__)
 
     if raw_layer.get("chunks") is not None:
+        raw_chunks = diagnostics.json_require(raw_layer, "chunks", list)
         tile_layer.chunks = []
-        for chunk in raw_layer["chunks"]:
+        for index, chunk in enumerate(cast(List[RawChunk], raw_chunks)):
             if raw_layer.get("encoding") is not None:
+                encoding = cast(
+                    str, diagnostics.json_optional(raw_layer, "encoding", str)
+                )
+                compression = cast(
+                    str,
+                    diagnostics.json_optional(
+                        raw_layer, "compression", str, default=""
+                    ),
+                )
                 tile_layer.chunks.append(
-                    _parse_chunk(chunk, raw_layer["encoding"], raw_layer["compression"])
+                    _parse_chunk(
+                        chunk,
+                        encoding,
+                        compression,
+                        path=("chunks", index),
+                    )
                 )
             else:
-                tile_layer.chunks.append(_parse_chunk(chunk))
+                tile_layer.chunks.append(_parse_chunk(chunk, path=("chunks", index)))
 
     if raw_layer.get("data") is not None:
         if raw_layer.get("encoding") is not None:
-            tile_layer.data = _decode_tile_layer_data(
-                data=cast(str, raw_layer["data"]),
-                compression=raw_layer["compression"],
-                layer_width=raw_layer["width"],
+            encoding = cast(str, diagnostics.json_optional(raw_layer, "encoding", str))
+            compression = cast(
+                str,
+                diagnostics.json_optional(raw_layer, "compression", str, default=""),
             )
+            width = _require_layer_width(raw_layer, ("width",))
+            if not isinstance(raw_layer["data"], str):
+                raise diagnostics.json_error(
+                    FieldTypeError,
+                    "Expected base64 encoded string data for layer with encoding "
+                    "{!r}, got {}".format(encoding, type(raw_layer["data"]).__name__),
+                    path=("data",),
+                    reason="encoded tile data must be a string",
+                )
+            if encoding not in ("base64", "csv"):
+                raise diagnostics.json_error(
+                    UnsupportedCompressionError,
+                    "Unsupported tile encoding {!r}, expected 'base64' or 'csv'".format(
+                        encoding
+                    ),
+                    path=("encoding",),
+                    reason="unsupported encoding",
+                )
+            if encoding == "base64":
+                tile_layer.data = _decode_tile_layer_data(
+                    data=raw_layer["data"],
+                    compression=compression,
+                    layer_width=width,
+                )
+            else:  # pragma: no cover - csv with the JSON format is unusual
+                values = []
+                for index, item in enumerate(raw_layer["data"].split(",")):
+                    try:
+                        values.append(int(item.strip()))
+                    except ValueError as error:
+                        raise diagnostics.json_error(
+                            InvalidFieldValueError,
+                            "Invalid integer {!r} at index {} in csv layer data".format(
+                                item.strip(), index
+                            ),
+                            path=("data",),
+                            reason=str(error),
+                        ) from error
+                tile_layer.data = _convert_raw_tile_layer_data(values, width)
         else:
+            width = _require_layer_width(raw_layer, ("width",))
+            raw_data = diagnostics.json_require(raw_layer, "data", list)
+            for index, item in enumerate(cast(List[Any], raw_data)):
+                if isinstance(item, bool) or not isinstance(item, int):
+                    raise diagnostics.json_error(
+                        FieldTypeError,
+                        "Expected integers in layer data, got {} at index {}".format(
+                            type(item).__name__, index
+                        ),
+                        path=("data", index),
+                        reason="tile ids must be integers",
+                    )
             tile_layer.data = _convert_raw_tile_layer_data(
-                raw_layer["data"], raw_layer["width"]  # type: ignore
+                cast(List[int], raw_data), width
             )
 
     return tile_layer
@@ -308,13 +505,18 @@ def _parse_object_layer(
     Returns:
         ObjectLayer: The ObjectLayer created from raw_layer
     """
+    raw_objects = diagnostics.json_require(raw_layer, "objects", list)
+    draworder = cast(str, diagnostics.json_require(raw_layer, "draworder", str))
+
     objects = []
-    for object_ in raw_layer["objects"]:
-        objects.append(parse_object(object_, parent_dir))
+    for index, object_ in enumerate(cast(List[RawObject], raw_objects)):
+        objects.append(
+            parse_object(object_, parent_dir, path=("objects", index), index=index)
+        )
 
     return ObjectLayer(
         tiled_objects=objects,
-        draw_order=raw_layer["draworder"],
+        draw_order=draworder,
         **_parse_common(raw_layer).__dict__,
     )
 
@@ -328,12 +530,22 @@ def _parse_image_layer(raw_layer: RawLayer) -> ImageLayer:
     Returns:
         ImageLayer: The ImageLayer created from raw_layer
     """
-    image_layer = ImageLayer(
-        image=Path(raw_layer["image"]), **_parse_common(raw_layer).__dict__
-    )
+    image = cast(str, diagnostics.json_require(raw_layer, "image", str))
+    image_layer = ImageLayer(image=Path(image), **_parse_common(raw_layer).__dict__)
 
     if raw_layer.get("transparentcolor") is not None:
-        image_layer.transparent_color = parse_color(raw_layer["transparentcolor"])
+        transparent = cast(
+            str, diagnostics.json_optional(raw_layer, "transparentcolor", str)
+        )
+        try:
+            image_layer.transparent_color = parse_color(transparent)
+        except InvalidFieldValueError as error:
+            raise diagnostics.json_error(
+                InvalidFieldValueError,
+                "Invalid transparent color {!r}".format(transparent),
+                path=("transparentcolor",),
+                reason=error.reason or str(error),
+            ) from error
 
     return image_layer
 
@@ -349,10 +561,19 @@ def _parse_group_layer(
     Returns:
         LayerGroup: The LayerGroup created from raw_layer
     """
+    raw_layers = diagnostics.json_require(raw_layer, "layers", list)
+
     layers = []
 
-    for layer in raw_layer["layers"]:
-        layers.append(parse(layer, parent_dir=parent_dir))
+    for index, layer in enumerate(cast(List[RawLayer], raw_layers)):
+        layers.append(
+            parse(
+                layer,
+                parent_dir=parent_dir,
+                path=("layers", index),
+                index=index,
+            )
+        )
 
     return LayerGroup(layers=layers, **_parse_common(raw_layer).__dict__)
 
@@ -360,6 +581,9 @@ def _parse_group_layer(
 def parse(
     raw_layer: RawLayer,
     parent_dir: Optional[Path] = None,
+    *,
+    path: JsonPath = (),
+    index: Optional[int] = None,
 ) -> Layer:
     """Parse a raw Layer into a pytiled_parser object.
 
@@ -368,22 +592,60 @@ def parse(
     Args:
         raw_layer: Raw layer to be parsed.
         parent_dir: The parent directory that the map file is in.
+        path: Path to this layer within the JSON document.
+        index: Index of this layer within its parent, used for diagnostics.
 
     Returns:
         Layer: A parsed Layer.
 
     Raises:
-        RuntimeError: For an invalid layer type being provided
+        UnknownLayerTypeError: For an invalid layer type being provided
     """
-    type_ = raw_layer["type"]
+    if not isinstance(raw_layer, dict):
+        raise diagnostics.json_error(
+            FieldTypeError,
+            "Expected a layer object, got {}".format(type(raw_layer).__name__),
+            path=path,
+            reason="layers are JSON objects",
+        )
 
-    if type_ == "objectgroup":
-        return _parse_object_layer(raw_layer, parent_dir)
-    elif type_ == "group":
-        return _parse_group_layer(raw_layer, parent_dir)
-    elif type_ == "imagelayer":
-        return _parse_image_layer(raw_layer)
-    elif type_ == "tilelayer":
-        return _parse_tile_layer(raw_layer)
+    type_ = raw_layer.get("type")
+    parent_layer = diagnostics.current_frame().layer
+    if not isinstance(type_, str):
+        raise diagnostics.json_error(
+            MissingFieldError,
+            "Missing required field 'type' on layer {}".format(
+                diagnostics.describe_layer(raw_layer, index)
+            ),
+            path=path + ("type",),
+            reason="layer type is required",
+        )
 
-    raise RuntimeError(f"An invalid layer type of {type_} was supplied")
+    description = diagnostics.describe_layer(raw_layer, index)
+    with diagnostics.enter(
+        json_path=path,
+        layer=diagnostics.chain_layer(parent_layer, description),
+        parent_dir=(
+            parent_dir
+            if parent_dir is not None
+            else diagnostics.current_frame().parent_dir
+        ),
+    ):
+        if type_ == "objectgroup":
+            return _parse_object_layer(raw_layer, parent_dir)
+        elif type_ == "group":
+            return _parse_group_layer(raw_layer, parent_dir)
+        elif type_ == "imagelayer":
+            return _parse_image_layer(raw_layer)
+        elif type_ == "tilelayer":
+            return _parse_tile_layer(raw_layer)
+
+        raise diagnostics.json_error(
+            UnknownLayerTypeError,
+            "Unknown layer type {!r} for layer {}. Expected one of "
+            "'tilelayer', 'objectgroup', 'imagelayer' or 'group'.".format(
+                type_, description
+            ),
+            path=("type",),
+            reason="unrecognized layer type",
+        )

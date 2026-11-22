@@ -4,6 +4,39 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [Unreleased]
+
+### Improved parser diagnostics
+
+Parse errors now report *where* a problem is, not just that one exists. Every
+:class:`pytiled_parser.ParseError` exposes ``file``, ``line``/``column``/
+``offset`` where the format provides them, ``field_path``, ``layer``,
+``object`` and ``template_chain`` attributes (also available via ``to_dict()``).
+
+- Distinguish a genuinely unknown format (:class:`UnrecognizedFormat`) from a
+  syntax error inside a recognized format (:class:`FormatSyntaxError`,
+  :class:`XMLSyntaxError`). All remain catchable as the historical
+  :class:`UnknownFormat`; syntax errors remain ``ValueError`` (and
+  ``xml.etree.ElementTree.ParseError`` for XML).
+- Data errors in a recognized map (missing fields, wrong JSON/XML types,
+  invalid property values, unknown layer types) raise dedicated exceptions
+  (:class:`MissingFieldError`, :class:`FieldTypeError`,
+  :class:`InvalidFieldValueError`, :class:`UnknownLayerTypeError`) instead of
+  being reported as an unknown format.
+- JSON field paths such as ``layers[0].objects[1].properties[2].value`` and
+  TMX line/column positions are included.
+- Layers are identified by name, and nested group layers by their full chain
+  (for example ``'Outer' > 'Inner' > 'objects'``). Objects are identified by
+  id and name.
+- External tilesets, templates and their tilesets report missing or unreadable
+  files as :class:`ExternalFileNotFoundError` / :class:`ExternalFileError`
+  (also ``OSError``) with the referencing field.
+- Nested object templates are resolved recursively; cycles raise
+  :class:`CircularReferenceError` with the full chain, and errors inside a
+  template point at the template file using paths relative to it. Absolute
+  filesystem paths unrelated to the reference are never exposed.
+- Normal parsing results are unchanged.
+
 ## [2.2.5] - 2024-07-01
 
 Adds a `__all__` section to the main library `__init__.py` file which fixes problems when running pyright in strict mode against this library, it would not be able to see the exported types.

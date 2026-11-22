@@ -1,0 +1,16 @@
+{"layers":[
+  {"type":"objectgroup","name":"objs","id":2,"draworder":"topdown","opacity":1,"visible":true,
+   "objects":[{"id":1,"name":"door","rotation":0,"visible":true,"width":1,"height":1,"x":1,"y":1,
+     "properties":[{"name":"color","type":"color","value":"ultraviolet"}]}]}
+ ],
+ "nextlayerid":3,
+ "nextobjectid":2,
+ "orientation":"orthogonal",
+ "renderorder":"right-down",
+ "tiledversion":"1.9.2",
+ "tileheight":32,
+ "tilesets":[],
+ "tilewidth":32,
+ "version":"1.9",
+ "width":8,
+ "height":6}

@@ -1,37 +1,59 @@
 import xml.etree.ElementTree as etree
 
+from pytiled_parser import diagnostics
+from pytiled_parser.exception import FieldTypeError, InvalidFieldValueError
 from pytiled_parser.parsers.tmx.properties import parse as parse_properties
 from pytiled_parser.util import parse_color
 from pytiled_parser.wang_set import WangColor, WangSet, WangTile
 
 
 def _parse_wang_tile(raw_wang_tile: etree.Element) -> WangTile:
-    """Parse the raw wang tile into a pytiled_parser type
+    raw_ids = diagnostics.xml_attr(raw_wang_tile, "wangid", field="wangtile.wangid")
+    assert raw_ids is not None
 
-    Args:
-        raw_wang_tile: XML Element to be parsed.
+    ids = []
+    for index, value in enumerate(raw_ids.split(",")):
+        try:
+            ids.append(int(value.strip()))
+        except (TypeError, ValueError) as error:
+            raise diagnostics.xml_error(
+                FieldTypeError,
+                "Expected an integer in wangid at index {}, got {!r}".format(
+                    index, value.strip()
+                ),
+                element=raw_wang_tile,
+                field="wangtile.wangid[{}]".format(index),
+                reason=str(error),
+            ) from error
 
-    Returns:
-        WangTile: A properly typed WangTile.
-    """
-    ids = [int(v.strip()) for v in raw_wang_tile.attrib["wangid"].split(",")]
-    return WangTile(tile_id=int(raw_wang_tile.attrib["tileid"]), wang_id=ids)
+    return WangTile(
+        tile_id=diagnostics.xml_int_attr(raw_wang_tile, "tileid", field="wangtile"),
+        wang_id=ids,
+    )
 
 
 def _parse_wang_color(raw_wang_color: etree.Element) -> WangColor:
-    """Parse the raw wang color into a pytiled_parser type
+    color = diagnostics.xml_attr(raw_wang_color, "color", field="wangcolor")
+    assert color is not None
 
-    Args:
-        raw_wang_color: XML Element to be parsed.
+    try:
+        parsed_color = parse_color(color)
+    except InvalidFieldValueError as error:
+        raise diagnostics.xml_error(
+            InvalidFieldValueError,
+            "Invalid wang color {!r}".format(color),
+            element=raw_wang_color,
+            field="wangcolor.color",
+            reason=error.reason or str(error),
+        ) from error
 
-    Returns:
-        WangColor: A properly typed WangColor.
-    """
     wang_color = WangColor(
-        name=raw_wang_color.attrib["name"],
-        color=parse_color(raw_wang_color.attrib["color"]),
-        tile=int(raw_wang_color.attrib["tile"]),
-        probability=float(raw_wang_color.attrib["probability"]),
+        name=diagnostics.xml_attr(raw_wang_color, "name", field="wangcolor"),
+        color=parsed_color,
+        tile=diagnostics.xml_int_attr(raw_wang_color, "tile", field="wangcolor"),
+        probability=diagnostics.xml_float_attr(
+            raw_wang_color, "probability", field="wangcolor"
+        ),
     )
 
     if raw_wang_color.attrib.get("class") is not None:
@@ -53,19 +75,19 @@ def parse(raw_wangset: etree.Element) -> WangSet:
     Returns:
         WangSet: A properly typed WangSet.
     """
-
     colors = []
     for raw_wang_color in raw_wangset.findall("./wangcolor"):
         colors.append(_parse_wang_color(raw_wang_color))
 
     tiles = {}
     for raw_wang_tile in raw_wangset.findall("./wangtile"):
-        tiles[int(raw_wang_tile.attrib["tileid"])] = _parse_wang_tile(raw_wang_tile)
+        tile_id = diagnostics.xml_int_attr(raw_wang_tile, "tileid", field="wangtile")
+        tiles[tile_id] = _parse_wang_tile(raw_wang_tile)
 
     wangset = WangSet(
-        name=raw_wangset.attrib["name"],
-        tile=int(raw_wangset.attrib["tile"]),
-        wang_type=raw_wangset.attrib["type"],
+        name=diagnostics.xml_attr(raw_wangset, "name", field="wangset"),
+        tile=diagnostics.xml_int_attr(raw_wangset, "tile", field="wangset"),
+        wang_type=diagnostics.xml_attr(raw_wangset, "type", field="wangset"),
         wang_colors=colors,
         wang_tiles=tiles,
     )

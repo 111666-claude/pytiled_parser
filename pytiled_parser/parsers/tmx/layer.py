@@ -1,5 +1,4 @@
-"""Layer parsing for the TMX Map Format.
-"""
+"""Layer parsing for the TMX Map Format."""
 
 import base64
 import gzip
@@ -9,7 +8,14 @@ import zlib
 from pathlib import Path
 from typing import List, Optional
 
+from pytiled_parser import diagnostics
 from pytiled_parser.common_types import OrderedPair, Size
+from pytiled_parser.exception import (
+    InvalidFieldValueError,
+    MissingFieldError,
+    UnknownLayerTypeError,
+    UnsupportedCompressionError,
+)
 from pytiled_parser.layer import (
     Chunk,
     ImageLayer,
@@ -37,6 +43,9 @@ if zstd_spec:  # pragma: no cover
 else:
     zstd = None
 
+# Field path used when reporting errors in the layer currently being parsed.
+_LAYER_FIELD = "layer"
+
 
 def _convert_raw_tile_layer_data(data: List[int], layer_width: int) -> List[List[int]]:
     """Convert raw layer data into a nested lit based on the layer width
@@ -48,6 +57,16 @@ def _convert_raw_tile_layer_data(data: List[int], layer_width: int) -> List[List
     Returns:
         List[List[int]]: A nested list containing the converted data
     """
+    if layer_width <= 0:
+        raise diagnostics.xml_error(
+            InvalidFieldValueError,
+            "Layer width must be greater than zero, got {}".format(layer_width),
+            field="width",
+            reason="tile data cannot be split into rows of width {}".format(
+                layer_width
+            ),
+        )
+
     tile_grid: List[List[int]] = [[]]
 
     column_count = 0
@@ -63,35 +82,93 @@ def _convert_raw_tile_layer_data(data: List[int], layer_width: int) -> List[List
 
 
 def _decode_tile_layer_data(
-    data: str, compression: str, layer_width: int
+    data: str,
+    compression: str,
+    layer_width: int,
+    *,
+    element: Optional[etree.Element] = None,
 ) -> List[List[int]]:
     """Decode Base64 Encoded tile data. Optionally supports gzip and zlib compression.
 
     Args:
         data: The base64 encoded data
         compression: Either zlib, gzip, or empty. If empty no decompression is done.
+        element: Element the data came from, for diagnostics.
 
     Returns:
         List[List[int]]: A nested list containing the decoded data
 
     Raises:
-        ValueError: For an unsupported compression type.
+        UnsupportedCompressionError: For an unsupported compression type.
     """
-    unencoded_data = base64.b64decode(data)
+    try:
+        # TMX files commonly wrap base64 data across lines; whitespace is not
+        # part of the payload.
+        compact = "".join(data.split())
+        unencoded_data = base64.b64decode(compact, validate=True)
+    except (TypeError, ValueError) as error:
+        raise diagnostics.xml_error(
+            InvalidFieldValueError,
+            "Tile data is not valid base64",
+            element=element,
+            field="data",
+            reason=str(error),
+        ) from error
+
     if compression == "zlib":
-        unzipped_data = zlib.decompress(unencoded_data)
+        try:
+            unzipped_data = zlib.decompress(unencoded_data)
+        except zlib.error as error:
+            raise diagnostics.xml_error(
+                InvalidFieldValueError,
+                "Could not decompress zlib tile data",
+                element=element,
+                field="data",
+                reason=str(error),
+            ) from error
     elif compression == "gzip":
-        unzipped_data = gzip.decompress(unencoded_data)
+        try:
+            unzipped_data = gzip.decompress(unencoded_data)
+        except (OSError, EOFError) as error:
+            raise diagnostics.xml_error(
+                InvalidFieldValueError,
+                "Could not decompress gzip tile data",
+                element=element,
+                field="data",
+                reason=str(error),
+            ) from error
     elif compression == "zstd" and zstd is None:
-        raise ValueError(
+        raise diagnostics.xml_error(
+            UnsupportedCompressionError,
             "zstd compression support is not installed."
-            "To install use 'pip install pytiled-parser[zstd]'"
+            "To install use 'pip install pytiled-parser[zstd]'",
+            element=element,
+            field="compression",
+            reason="zstd support is not installed",
         )
     # See above note at top of module about zstd tests
     elif compression == "zstd":  # pragma: no cover
-        unzipped_data = zstd.decompress(unencoded_data)
-    else:
+        try:
+            unzipped_data = zstd.decompress(unencoded_data)
+        except Exception as error:
+            raise diagnostics.xml_error(
+                InvalidFieldValueError,
+                "Could not decompress zstd tile data",
+                element=element,
+                field="data",
+                reason=str(error),
+            ) from error
+    elif compression in ("", None):
         unzipped_data = unencoded_data
+    else:
+        raise diagnostics.xml_error(
+            UnsupportedCompressionError,
+            "Unsupported compression {!r}, expected 'zlib', 'gzip', 'zstd' "
+            "or none".format(compression),
+            element=element,
+            field="compression",
+            reason="unsupported compression method",
+        )
 
     tile_grid: List[int] = []
 
@@ -125,29 +202,33 @@ def _parse_chunk(
     Returns:
         Chunk: The Chunk created from the raw_chunk
     """
+    width = diagnostics.xml_int_attr(raw_chunk, "width", field="chunk")
+    height = diagnostics.xml_int_attr(raw_chunk, "height", field="chunk")
+    x = diagnostics.xml_int_attr(raw_chunk, "x", field="chunk")
+    y = diagnostics.xml_int_attr(raw_chunk, "y", field="chunk")
+
     if encoding == "base64":
         assert isinstance(compression, str)
+        text = diagnostics.xml_text(raw_chunk, field="chunk.data")
+        assert text is not None
         data = _decode_tile_layer_data(
-            raw_chunk.text, compression, int(raw_chunk.attrib["width"])  # type: ignore
+            text, compression, width, element=raw_chunk  # type: ignore[arg-type]
         )
     else:
         data = _convert_raw_tile_layer_data(
-            [int(v.strip()) for v in raw_chunk.text.split(",")],  # type: ignore
-            int(raw_chunk.attrib["width"]),
+            diagnostics.xml_int_list(raw_chunk, field="chunk.data"),
+            width,  # type: ignore[arg-type]
         )
 
     return Chunk(
-        coordinates=OrderedPair(int(raw_chunk.attrib["x"]), int(raw_chunk.attrib["y"])),
-        size=Size(int(raw_chunk.attrib["width"]), int(raw_chunk.attrib["height"])),
+        coordinates=OrderedPair(x, y),  # type: ignore[arg-type]
+        size=Size(width, height),  # type: ignore[arg-type]
         data=data,
     )
 
 
 def _parse_common(raw_layer: etree.Element) -> Layer:
     """Create a Layer containing all the attributes common to all layer types.
-
-    This is to create the stub Layer object that can then be used to create the actual
-        specific sub-classes of Layer.
 
     Args:
         raw_layer: XML Element to get common attributes from
@@ -163,17 +244,22 @@ def _parse_common(raw_layer: etree.Element) -> Layer:
     )
 
     if raw_layer.attrib.get("opacity") is not None:
-        common.opacity = float(raw_layer.attrib["opacity"])
+        common.opacity = diagnostics.xml_float_attr(  # type: ignore[assignment]
+            raw_layer, "opacity"
+        )
 
     if raw_layer.attrib.get("visible") is not None:
-        common.visible = bool(int(raw_layer.attrib["visible"]))
+        common.visible = diagnostics.xml_bool_attr(  # type: ignore[assignment]
+            raw_layer, "visible"
+        )
 
     if raw_layer.attrib.get("id") is not None:
-        common.id = int(raw_layer.attrib["id"])
+        common.id = diagnostics.xml_int_attr(raw_layer, "id")  # type: ignore[assignment]
 
     if raw_layer.attrib.get("offsetx") is not None:
         common.offset = OrderedPair(
-            float(raw_layer.attrib["offsetx"]), float(raw_layer.attrib["offsety"])
+            diagnostics.xml_float_attr(raw_layer, "offsetx"),
+            diagnostics.xml_float_attr(raw_layer, "offsety"),  # type: ignore[arg-type]
         )
 
     properties_element = raw_layer.find("./properties")
@@ -183,24 +269,42 @@ def _parse_common(raw_layer: etree.Element) -> Layer:
     parallax = [1.0, 1.0]
 
     if raw_layer.attrib.get("parallaxx") is not None:
-        parallax[0] = float(raw_layer.attrib["parallaxx"])
+        parallax[0] = diagnostics.xml_float_attr(  # type: ignore[assignment]
+            raw_layer, "parallaxx"
+        )
 
     if raw_layer.attrib.get("parallaxy") is not None:
-        parallax[1] = float(raw_layer.attrib["parallaxy"])
+        parallax[1] = diagnostics.xml_float_attr(  # type: ignore[assignment]
+            raw_layer, "parallaxy"
+        )
 
     common.parallax_factor = OrderedPair(parallax[0], parallax[1])
 
     if raw_layer.attrib.get("tintcolor") is not None:
-        common.tint_color = parse_color(raw_layer.attrib["tintcolor"])
+        tint = raw_layer.attrib["tintcolor"]
+        try:
+            common.tint_color = parse_color(tint)
+        except InvalidFieldValueError as error:
+            raise diagnostics.xml_error(
+                InvalidFieldValueError,
+                "Invalid tint color {!r}".format(tint),
+                element=raw_layer,
+                field="tintcolor",
+                reason=error.reason or str(error),
+            ) from error
 
     if raw_layer.attrib.get("class") is not None:
         common.class_ = raw_layer.attrib["class"]
 
     if raw_layer.attrib.get("repeatx") is not None:
-        common.repeat_x = bool(int(raw_layer.attrib["repeatx"]))
+        common.repeat_x = diagnostics.xml_bool_attr(  # type: ignore[assignment]
+            raw_layer, "repeatx"
+        )
 
     if raw_layer.attrib.get("repeaty") is not None:
-        common.repeat_y = bool(int(raw_layer.attrib["repeaty"]))
+        common.repeat_y = diagnostics.xml_bool_attr(  # type: ignore[assignment]
+            raw_layer, "repeaty"
+        )
 
     return common
 
@@ -216,8 +320,12 @@ def _parse_tile_layer(raw_layer: etree.Element) -> TileLayer:
     """
     common = _parse_common(raw_layer).__dict__
     del common["size"]
+
+    width = diagnostics.xml_int_attr(raw_layer, "width")
+    height = diagnostics.xml_int_attr(raw_layer, "height")
+
     tile_layer = TileLayer(
-        size=Size(int(raw_layer.attrib["width"]), int(raw_layer.attrib["height"])),
+        size=Size(width, height),  # type: ignore[arg-type]
         **common,
     )
 
@@ -234,15 +342,27 @@ def _parse_tile_layer(raw_layer: etree.Element) -> TileLayer:
         raw_chunks = data_element.findall("chunk")
         if not raw_chunks:
             if encoding and encoding != "csv":
+                text = diagnostics.xml_text(data_element, field="data")
+                assert text is not None
+                if encoding not in ("base64",):
+                    raise diagnostics.xml_error(
+                        UnsupportedCompressionError,
+                        "Unsupported tile encoding {!r}, expected 'base64' or "
+                        "'csv'".format(encoding),
+                        element=data_element,
+                        field="encoding",
+                        reason="unsupported encoding",
+                    )
                 tile_layer.data = _decode_tile_layer_data(
-                    data=data_element.text,  # type: ignore
+                    data=text,
                     compression=compression,
-                    layer_width=int(raw_layer.attrib["width"]),
+                    layer_width=width,  # type: ignore[arg-type]
+                    element=data_element,
                 )
             else:
                 tile_layer.data = _convert_raw_tile_layer_data(
-                    [int(v.strip()) for v in data_element.text.split(",")],  # type: ignore
-                    int(raw_layer.attrib["width"]),
+                    diagnostics.xml_int_list(data_element, field="data"),
+                    width,  # type: ignore[arg-type]
                 )
         else:
             chunks = []
@@ -273,8 +393,8 @@ def _parse_object_layer(
         ObjectLayer: The ObjectLayer created from raw_layer
     """
     objects = []
-    for object_ in raw_layer.findall("./object"):
-        objects.append(parse_object(object_, parent_dir))
+    for index, object_ in enumerate(raw_layer.findall("./object")):
+        objects.append(parse_object(object_, parent_dir, index=index))
 
     object_layer = ObjectLayer(
         tiled_objects=objects,
@@ -298,11 +418,25 @@ def _parse_image_layer(raw_layer: etree.Element) -> ImageLayer:
     """
     image_element = raw_layer.find("./image")
     if image_element is not None:
-        source = Path(image_element.attrib["source"])
+        source_attr = diagnostics.xml_attr(
+            image_element, "source", field="image.source"
+        )
+        assert source_attr is not None
+        source = Path(source_attr)
 
         transparent_color = None
         if image_element.attrib.get("trans") is not None:
-            transparent_color = parse_color(image_element.attrib["trans"])
+            transparent = image_element.attrib["trans"]
+            try:
+                transparent_color = parse_color(transparent)
+            except InvalidFieldValueError as error:
+                raise diagnostics.xml_error(
+                    InvalidFieldValueError,
+                    "Invalid transparent color {!r}".format(transparent),
+                    element=image_element,
+                    field="image.trans",
+                    reason=error.reason or str(error),
+                ) from error
 
         image_layer = ImageLayer(
             image=source,
@@ -312,7 +446,13 @@ def _parse_image_layer(raw_layer: etree.Element) -> ImageLayer:
 
         return image_layer
 
-    raise RuntimeError("Tried to parse an image layer that doesn't have an image!")
+    raise diagnostics.xml_error(
+        MissingFieldError,
+        "Image layer has no <image> child",
+        element=raw_layer,
+        field="image",
+        reason="image layers require an <image> element",
+    )
 
 
 def _parse_group_layer(
@@ -327,23 +467,22 @@ def _parse_group_layer(
         LayerGroup: The LayerGroup created from raw_layer
     """
     layers: List[Layer] = []
+    index = 0
     for layer in raw_layer.findall("./layer"):
-        layers.append(_parse_tile_layer(layer))
+        layers.append(parse(layer, parent_dir, index=index))
+        index += 1
 
     for layer in raw_layer.findall("./objectgroup"):
-        layers.append(_parse_object_layer(layer, parent_dir))
+        layers.append(parse(layer, parent_dir, index=index))
+        index += 1
 
     for layer in raw_layer.findall("./imagelayer"):
-        layers.append(_parse_image_layer(layer))
+        layers.append(parse(layer, parent_dir, index=index))
+        index += 1
 
     for layer in raw_layer.findall("./group"):
-        layers.append(_parse_group_layer(layer, parent_dir))
-    # layers = []
-    # layers = [
-    #    parse(child_layer, parent_dir=parent_dir)
-    #    for child_layer in raw_layer.iter()
-    #    if child_layer.tag in ["layer", "objectgroup", "imagelayer", "group"]
-    # ]
+        layers.append(parse(layer, parent_dir, index=index))
+        index += 1
 
     return LayerGroup(layers=layers, **_parse_common(raw_layer).__dict__)
 
@@ -351,6 +490,8 @@ def _parse_group_layer(
 def parse(
     raw_layer: etree.Element,
     parent_dir: Optional[Path] = None,
+    *,
+    index: Optional[int] = None,
 ) -> Layer:
     """Parse a raw Layer into a pytiled_parser object.
 
@@ -359,22 +500,46 @@ def parse(
     Args:
         raw_layer: Raw layer to be parsed.
         parent_dir: The parent directory that the map file is in.
+        index: Index of this layer within its parent, used for diagnostics.
 
     Returns:
         Layer: A parsed Layer.
 
     Raises:
-        RuntimeError: For an invalid layer type being provided
+        UnknownLayerTypeError: For an invalid layer type being provided
     """
     type_ = raw_layer.tag
 
-    if type_ == "objectgroup":
-        return _parse_object_layer(raw_layer, parent_dir)
-    elif type_ == "group":
-        return _parse_group_layer(raw_layer, parent_dir)
-    elif type_ == "imagelayer":
-        return _parse_image_layer(raw_layer)
-    elif type_ == "layer":
-        return _parse_tile_layer(raw_layer)
-    else:
-        raise RuntimeError("Unknown layer type in map file!")
+    description = diagnostics.describe_xml_layer(raw_layer)
+    if description.startswith("<") and index is not None:
+        description = "<{} index {}>".format(type_, index)
+
+    parent_layer = diagnostics.current_frame().layer
+    # Nested layers already live under a "layer" prefix; do not repeat it.
+    already_in_layer = diagnostics.current_frame().field_prefix.startswith(_LAYER_FIELD)
+    with diagnostics.enter(
+        layer=diagnostics.chain_layer(parent_layer, description),
+        field_prefix=None if already_in_layer else _LAYER_FIELD,
+        parent_dir=(
+            parent_dir
+            if parent_dir is not None
+            else diagnostics.current_frame().parent_dir
+        ),
+    ):
+        if type_ == "objectgroup":
+            return _parse_object_layer(raw_layer, parent_dir)
+        elif type_ == "group":
+            return _parse_group_layer(raw_layer, parent_dir)
+        elif type_ == "imagelayer":
+            return _parse_image_layer(raw_layer)
+        elif type_ == "layer":
+            return _parse_tile_layer(raw_layer)
+        else:
+            raise diagnostics.xml_error(
+                UnknownLayerTypeError,
+                "Unknown layer type <{}>. Expected one of <layer>, "
+                "<objectgroup>, <imagelayer> or <group>.".format(type_),
+                element=raw_layer,
+                field="type",
+                reason="unrecognized layer element",
+            )

@@ -1,15 +1,14 @@
-import json
-import xml.etree.ElementTree as etree
 from pathlib import Path
 
-from pytiled_parser import UnknownFormat
+from pytiled_parser import diagnostics
+from pytiled_parser.diagnostics import JsonDocument, XmlDocument
 from pytiled_parser.parsers.json.tiled_map import parse as json_map_parse
 from pytiled_parser.parsers.json.tileset import parse as json_tileset_parse
 from pytiled_parser.parsers.tmx.tiled_map import parse as tmx_map_parse
 from pytiled_parser.parsers.tmx.tileset import parse as tmx_tileset_parse
 from pytiled_parser.tiled_map import TiledMap
 from pytiled_parser.tileset import Tileset
-from pytiled_parser.util import check_format
+from pytiled_parser.util import check_format, load_document
 from pytiled_parser.world import World
 from pytiled_parser.world import parse_world as _parse_world
 
@@ -22,20 +21,21 @@ def parse_map(file: Path) -> TiledMap:
 
     Returns:
         TiledMap: A parsed and typed TiledMap
+
+    Raises:
+        UnknownFormat: When the file is not a recognized TMX/JSON map.  The
+            concrete subclass distinguishes a genuinely unknown format
+            (:class:`UnrecognizedFormat`) from a syntax error inside a
+            recognized one (:class:`FormatSyntaxError`).
+        ParseError: For type/field errors in a recognized map.  These never
+            masquerade as :class:`UnknownFormat`.
     """
     parser = check_format(file)
 
     # The type ignores are because mypy for some reason thinks those functions return Any
     if parser == "tmx":
         return tmx_map_parse(file)  # type: ignore
-    else:
-        try:
-            return json_map_parse(file)  # type: ignore
-        except ValueError:
-            raise UnknownFormat(
-                "Unknown Map Format, please use either the TMX or JSON format. "
-                "This message could also mean your map file is invalid or corrupted."
-            )
+    return json_map_parse(file)  # type: ignore
 
 
 def parse_tileset(file: Path) -> Tileset:
@@ -50,19 +50,15 @@ def parse_tileset(file: Path) -> Tileset:
     parser = check_format(file)
 
     if parser == "tmx":
-        with open(file) as map_file:
-            raw_tileset = etree.parse(map_file).getroot()
-        return tmx_tileset_parse(raw_tileset, 1)
-    else:
-        try:
-            with open(file) as my_file:
-                raw_tileset = json.load(my_file)
-            return json_tileset_parse(raw_tileset, 1)
-        except ValueError:
-            raise UnknownFormat(
-                "Unknowm Tileset Format, please use either the TSX or JSON format. "
-                "This message could also mean your tileset file is invalid or corrupted."
-            )
+        document = load_document(file)
+        assert isinstance(document, XmlDocument)
+        with diagnostics.enter(document=document, parent_dir=file.parent):
+            return tmx_tileset_parse(document.root, 1)
+
+    document = load_document(file)
+    assert isinstance(document, JsonDocument)
+    with diagnostics.enter(document=document, parent_dir=file.parent):
+        return json_tileset_parse(document.data, 1)
 
 
 def parse_world(file: Path) -> World:

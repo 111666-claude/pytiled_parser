@@ -16,6 +16,7 @@ cover some of the concepts surrounding that module and it's usage within Tiled.
     :caption: PyTiled Parser
 
     parser
+    exception
     common_types
     properties
     tileset

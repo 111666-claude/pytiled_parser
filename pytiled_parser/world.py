@@ -9,17 +9,23 @@ does not automatically load each map within the world, this is so that the game
 or engine implementation can decide how to handle map loading.
 """
 
-import json
 import re
 from os import listdir
 from os.path import isfile, join
 from pathlib import Path
-from typing import List
+from typing import Any, List, Tuple
 
 import attr
 from typing_extensions import TypedDict
 
+from pytiled_parser import diagnostics
 from pytiled_parser.common_types import OrderedPair, Size
+from pytiled_parser.diagnostics import JsonDocument
+from pytiled_parser.exception import (
+    FieldTypeError,
+    InvalidFieldValueError,
+    UnrecognizedFormat,
+)
 
 
 @attr.s(auto_attribs=True)
@@ -95,8 +101,14 @@ def _parse_world_map(raw_world_map: RawWorldMap, map_file: Path) -> WorldMap:
     """
     return WorldMap(
         map_file=map_file,
-        size=Size(raw_world_map["width"], raw_world_map["height"]),
-        coordinates=OrderedPair(raw_world_map["x"], raw_world_map["y"]),
+        size=Size(
+            diagnostics.json_require(raw_world_map, "width", (int, float)),
+            diagnostics.json_require(raw_world_map, "height", (int, float)),
+        ),
+        coordinates=OrderedPair(
+            diagnostics.json_require(raw_world_map, "x", (int, float)),
+            diagnostics.json_require(raw_world_map, "y", (int, float)),
+        ),
     )
 
 
@@ -110,58 +122,161 @@ def parse_world(file: Path) -> World:
         World: A properly parsed [World][pytiled_parser.world.World]
     """
 
-    with open(file) as world_file:
-        raw_world = json.load(world_file)
+    document = diagnostics.load_document(file)
+    if not isinstance(document, JsonDocument):
+        raise UnrecognizedFormat(
+            "Expected a JSON world file, but '{}' contains XML".format(
+                document.display_file
+            ),
+            file=document.display_file,
+            reason="file content does not match its detected format",
+        )
+
+    raw_world = document.data
+    if not isinstance(raw_world, dict):
+        raise diagnostics.json_error(
+            FieldTypeError,
+            "Expected the world file to contain a JSON object, got {}".format(
+                type(raw_world).__name__
+            ),
+            reason="world files contain a JSON object",
+        )
 
     parent_dir = file.parent
 
     maps: List[WorldMap] = []
 
-    if raw_world.get("maps"):
-        for raw_map in raw_world["maps"]:
-            map_path = Path(parent_dir / raw_map["fileName"])
-            maps.append(_parse_world_map(raw_map, map_path))
+    with diagnostics.enter(document=document, parent_dir=parent_dir):
+        raw_maps = raw_world.get("maps")
+        if raw_maps:
+            if not isinstance(raw_maps, list):
+                raise diagnostics.json_error(
+                    FieldTypeError,
+                    "Expected an array for 'maps', got {}".format(
+                        type(raw_maps).__name__
+                    ),
+                    path=("maps",),
+                    reason="maps must be an array",
+                )
+            for index, raw_map in enumerate(raw_maps):
+                map_path = ("maps", index)
+                if not isinstance(raw_map, dict):
+                    raise diagnostics.json_error(
+                        FieldTypeError,
+                        "Expected an object for map at index {}, got {}".format(
+                            index, type(raw_map).__name__
+                        ),
+                        path=map_path,
+                        reason="world maps are JSON objects",
+                    )
+                with diagnostics.enter(json_path=map_path):
+                    file_name = diagnostics.json_require(raw_map, "fileName", str)
+                    parsed_map_file = Path(parent_dir / file_name)
+                    maps.append(
+                        _parse_world_map(
+                            raw_map, parsed_map_file  # type: ignore[arg-type]
+                        )
+                    )
 
-    if raw_world.get("patterns"):
-        for raw_pattern in raw_world["patterns"]:
-            regex = re.compile(raw_pattern["regexp"])
-            map_files = [
-                f
-                for f in listdir(parent_dir)
-                if isfile(join(parent_dir, f)) and regex.match(f)
-            ]
-            for map_file in map_files:
-                search = regex.search(map_file)
-                if search:
-                    width = raw_pattern["multiplierX"]
-                    height = raw_pattern["multiplierY"]
+        raw_patterns = raw_world.get("patterns")
+        if raw_patterns:
+            if not isinstance(raw_patterns, list):
+                raise diagnostics.json_error(
+                    FieldTypeError,
+                    "Expected an array for 'patterns', got {}".format(
+                        type(raw_patterns).__name__
+                    ),
+                    path=("patterns",),
+                    reason="patterns must be an array",
+                )
+            for pattern_index, raw_pattern in enumerate(raw_patterns):
+                pattern_path = ("patterns", pattern_index)
+                if not isinstance(raw_pattern, dict):
+                    raise diagnostics.json_error(
+                        FieldTypeError,
+                        "Expected an object for pattern at index {}, got {}".format(
+                            pattern_index, type(raw_pattern).__name__
+                        ),
+                        path=pattern_path,
+                        reason="patterns are JSON objects",
+                    )
+                with diagnostics.enter(json_path=pattern_path):
+                    maps.extend(
+                        _parse_pattern(
+                            raw_pattern,  # type: ignore[arg-type]
+                            parent_dir,
+                            pattern_path,
+                        )
+                    )
 
-                    offset_x = 0
-                    offset_y = 0
+        world = World(maps=maps)
 
-                    if raw_pattern.get("offsetX"):
-                        offset_x = raw_pattern["offsetX"]
-
-                    if raw_pattern.get("offsetY"):
-                        offset_y = raw_pattern["offsetY"]
-
-                    x = (float(search.group(1)) * width) + offset_x
-                    y = (float(search.group(2)) * height) + offset_y
-
-                    raw_world_map: RawWorldMap = {
-                        "fileName": map_file,
-                        "width": width,
-                        "height": height,
-                        "x": x,
-                        "y": y,
-                    }
-
-                    map_path = Path(parent_dir / map_file)
-                    maps.append(_parse_world_map(raw_world_map, map_path))
-
-    world = World(maps=maps)
-
-    if raw_world.get("onlyShowAdjacentMaps"):
-        world.only_show_adjacent = raw_world["onlyShowAdjacentMaps"]
+        if raw_world.get("onlyShowAdjacentMaps") is not None:
+            world.only_show_adjacent = bool(
+                diagnostics.json_require(raw_world, "onlyShowAdjacentMaps", bool)
+            )
 
     return world
+
+
+def _parse_pattern(
+    raw_pattern: RawPattern,
+    parent_dir: Path,
+    pattern_path: Tuple[Any, ...],
+) -> List[WorldMap]:
+    regex_source = diagnostics.json_require(raw_pattern, "regexp", str)
+    try:
+        regex = re.compile(regex_source)
+    except re.error as error:
+        raise diagnostics.json_error(
+            FieldTypeError,
+            "Invalid regular expression {!r}: {}".format(regex_source, error),
+            path=("regexp",),
+            reason=str(error),
+        ) from error
+
+    width = diagnostics.json_require(raw_pattern, "multiplierX", (int, float))
+    height = diagnostics.json_require(raw_pattern, "multiplierY", (int, float))
+
+    offset_x = 0.0
+    offset_y = 0.0
+
+    if raw_pattern.get("offsetX"):
+        offset_x = float(diagnostics.json_require(raw_pattern, "offsetX", (int, float)))
+
+    if raw_pattern.get("offsetY"):
+        offset_y = float(diagnostics.json_require(raw_pattern, "offsetY", (int, float)))
+
+    parsed_maps: List[WorldMap] = []
+
+    map_files = [
+        f for f in listdir(parent_dir) if isfile(join(parent_dir, f)) and regex.match(f)
+    ]
+    for map_file in map_files:
+        search = regex.search(map_file)
+        if not search:
+            continue
+        try:
+            x = (float(search.group(1)) * width) + offset_x
+            y = (float(search.group(2)) * height) + offset_y
+        except (IndexError, TypeError, ValueError) as error:
+            raise diagnostics.json_error(
+                InvalidFieldValueError,
+                "Pattern regexp {!r} must capture two numeric groups; matched "
+                "{!r}".format(regex_source, map_file),
+                path=("regexp",),
+                reason=str(error),
+            ) from error
+
+        raw_world_map: RawWorldMap = {
+            "fileName": map_file,
+            "width": width,
+            "height": height,
+            "x": x,
+            "y": y,
+        }
+
+        map_path = Path(parent_dir / map_file)
+        parsed_maps.append(_parse_world_map(raw_world_map, map_path))
+
+    return parsed_maps

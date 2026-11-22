@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.9" tiledversion="1.9.2" orientation="orthogonal" renderorder="right-down" width="8" height="6" tilewidth="32" tileheight="32" infinite="0" nextlayerid="6" nextobjectid="10">
+ <group id="3" name="Outer">
+  <group id="4" name="Inner">
+   <objectgroup id="5" name="objs">
+    <object id="9" name="rock" x="1" y="bad" width="1" height="1"/>
+   </objectgroup>
+  </group>
+ </group>
+</map>

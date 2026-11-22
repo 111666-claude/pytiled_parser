@@ -12,7 +12,23 @@ PyTiled Parser is not tied to any particular graphics library or game engine.
 # pylint: disable=too-few-public-methods
 
 from .common_types import Color, OrderedPair, Size
-from .exception import UnknownFormat
+from .exception import (
+    CircularReferenceError,
+    ExternalFileError,
+    ExternalFileNotFoundError,
+    FieldTypeError,
+    FormatSyntaxError,
+    InvalidFieldValueError,
+    MissingFieldError,
+    ParseError,
+    TemplateError,
+    UnknownFormat,
+    UnknownLayerTypeError,
+    UnrecognizedFormat,
+    UnsupportedCompressionError,
+    UnsupportedTemplateError,
+    XMLSyntaxError,
+)
 from .layer import Chunk, ImageLayer, Layer, LayerGroup, ObjectLayer, TileLayer
 from .parser import parse_map, parse_world, parse_tileset
 from .properties import Properties, Property
@@ -25,6 +41,20 @@ __all__ = [
     "OrderedPair",
     "Size",
     "UnknownFormat",
+    "ParseError",
+    "UnrecognizedFormat",
+    "FormatSyntaxError",
+    "XMLSyntaxError",
+    "MissingFieldError",
+    "FieldTypeError",
+    "InvalidFieldValueError",
+    "ExternalFileError",
+    "ExternalFileNotFoundError",
+    "UnknownLayerTypeError",
+    "CircularReferenceError",
+    "UnsupportedTemplateError",
+    "TemplateError",
+    "UnsupportedCompressionError",
     "Chunk",
     "ImageLayer",
     "Layer",

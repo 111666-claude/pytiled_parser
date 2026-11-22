@@ -1,0 +1,9 @@
+{ "columns":8,
+ "image":"tiles.png",
+ "margin":1,
+ "name":"broken",
+ "spacing":1,
+ "tilecount":48,
+ "tileheight":"tall",
+ "tilewidth":32,
+ "version":"1.9"}

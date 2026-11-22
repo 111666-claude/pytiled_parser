@@ -1,0 +1,12 @@
+{"layers":[],
+ "nextlayerid":2,
+ "nextobjectid":1,
+ "orientation":"orthogonal",
+ "renderorder":"right-down",
+ "tiledversion":"1.9.2",
+ "tileheight":32,
+ "tilesets":[{"firstgid":1,"source":"broken_external_tileset.json"}],
+ "tilewidth":32,
+ "version":"1.9",
+ "width":8,
+ "height":6}
