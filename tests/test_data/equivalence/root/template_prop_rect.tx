@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<template>
+ <object class="TemplateProp" width="64" height="24">
+  <properties>
+   <property name="material" value="wood"/>
+   <property name="weight" type="int" value="10"/>
+  </properties>
+ </object>
+</template>

@@ -1,0 +1,24 @@
+{ "object":
+    {
+     "class":"TemplateProp",
+     "height":24,
+     "id":1,
+     "name":"",
+     "rotation":0,
+     "visible":true,
+     "width":64,
+     "properties":[
+        {
+         "name":"material",
+         "type":"string",
+         "value":"wood"
+        },
+        {
+         "name":"weight",
+         "type":"int",
+         "value":10
+        }
+        ]
+    },
+ "type":"template"
+}
